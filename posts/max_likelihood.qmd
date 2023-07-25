@@ -1,0 +1,71 @@
+---
+title: An introduction to maximum likelihood estimation and applications to machine learning
+categories:
+    - Statistics
+    - Machine learning
+---
+
+The _maximum likelihood_ paradigm describes a rule to find a distribution that best fits a set of examples among a parametrised set of distributions. This article defines maximum likelihood estimators and gives two examples of learning models motivated by this paradigm.
+
+# Theoretical foundations
+
+## Motivation
+
+Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure:
+$$\{f_\vartheta : \R \to [0, 1]\}_{\vartheta \in \Theta}.$$
+
+Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_. If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle and requires a bit of imagination. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$.
+
+## General definition
+
+From this intuition, we can define the _likelihood_ of a sequence of independent and identically-distributed observations $\mathbf{x} = \{x_1, \mathellipsis, x_n\}$ as $L(\vartheta) = f_\vartheta^n(\mathbf{x})$, where $f_\vartheta^n$ is the joint probability distribution over sequences of $n$ independent $f_\vartheta$-distributed examples. We then have:
+$$L(\vartheta) = \prod_{j = 1}^n f_\vartheta(x_j).$$
+
+From a computational perspective, we often prefer to deal with the $\log$-likelihood of a sequence of examples rather than their likelihood:
+
+$$\log L(\vartheta) = \sum_{j = 1}^n \log\left(f_\vartheta(x_j)\right).$$
+
+We then define the maximum-likelihood estimator of $\vartheta$ as:
+
+$$\hat\vartheta_{\text{ml}} = \argmax_{\vartheta \in \Theta} L(\vartheta),$$
+
+where the existence and uniqueness of the argmax is assumed.
+
+Note that since $\log$ is strictly increasing, $\argmax_\vartheta L(\vartheta) = \argmax_\vartheta (\log(L(\vartheta)))$.
+
+## Approximating distribution of input/output pairs with conditional maximumum likelihood
+
+Similarly, we can use the maximum likelihood paradigm to find a distribution that best describes a set of observations of the form $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\}$, where $y_j$ is viewed as an output associated with input $x_j$. For every $x_j$, we consider the density functions $f_\vartheta(\cdot | x_j)$ across all $\vartheta \in \Theta$. We then define the likelihood of the set of observations for parameter $\vartheta$ as the density function of the random vector sequence $(Y_1, \mathellipsis, Y_n)$, where $Y_j \sim f_\theta(\cdot | x_j)$, evaluated at $(y_1, \mathellipsis, y_n)$ i.e.
+$$L(\vartheta) = \prod_{j = 1}^n f_\vartheta(y_j | x_j).$$
+
+# Application to linear regression
+
+A linear regression model is a model that seeks to approximate by a linear or affine function a real number $y$ based on an observation $x$.
+We assume that for a fixed parameter $x$, we made a set of observations $\{y_i\}_{i = 1}^k$ normally distributed around some mean $\mu(x)$ for some variance $\sigma^2$ fixed before $x$ (for simplicity, we'll assume that $\sigma^2 = 1$).
+
+If $(Y_1, \mathellipsis, Y_n)$ is a random vector whose components are independent and normally distributed with non-zero variance then it is distributed according to a _multivariate normal distribution_ characterised by its vector of expected values $\mathbf M \in \R^n$ and _invertible_ covariance matrix $C$ (where the invertibility comes from the fact that variances are all non-zero). Since the covariance matrix is invertible, it can be shown that the distribution of the vector admits a density with respect to the Lebesgue measure on $\R^n$, expressed as:
+$$f_{\mathbf M}(\mathbf{z}) = \alpha \exp\left(-\frac12 \langle \mathbf{z} - \mathbf M, C^{-1}(\mathbf z - \mathbf M) \rangle\right),$$
+where $\langle \cdot, \cdot\rangle$ is the dot product on $\R^n$ and $\alpha$ is a positive constant that depends on $n$ and the parameters of the distribution. Since we assumed the variance of all our little univariate normal distributions to be $1$, $C$ is actually $\text{Id}_n$, so we can rewrite the above expression as follows:
+$$f(\mathbf{z}) = \alpha \exp\left(-\frac12 \|\mathbf{z} - \mathbf{M}\|^2\right),$$
+where $\|\cdot\|$ is the Euclidean norm, i.e. the norm associated with the dot product.
+
+The covariance matrix being fixed, we can use the maximum likelihood paradigm to estimate the parameter $\mathbf{M} = (y_1, \mathellipsis, y_n)$ of the multivariate normal distribution. We want to approximate $\mathbf{M}$ by an affine function, so the parameter of the model is a pair $(W, B)$ defining a mean $W\mathbf{x} + B \in \R^n$. The likelihood is therefore:
+$$L(W, B) = \alpha \exp\left(-\frac12 \|W\mathbf{x} + B - \mathbf{M}\|^2\right),$$
+where $\|\cdot\|$ is the Euclidean norm.
+
+The $\log$-likelihood is then:
+$$-\frac12 \|W\mathbf{x} + B - M\|^2 + \text{ stuff}.$$
+
+In machine learning, we often consider _cost functions_ that we seek to minimise, so we actually want to minimise:
+$$\frac{1}2 \|W\mathbf{x} + B - M\|^2,$$
+
+which provides a statistical, rather than topological, argument to justify the choice of the Euclidean norm in what is then known as _least-squares regression_.
+
+# Application to binary classification
+
+Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}$, we can say that for a given $x \in \R^n$, associated values $y$ are taken by a $\text{Bern}(\vartheta(x))$-distributed random variable $Y_x$. The goal is then to find a function $\hat{y} : \R^n \to [0, 1]$ that maps an input vector $x \in \R^d$ to a parameter $\vartheta$ such that it is likely that $Y_x \sim \text{Bern}(\vartheta(x))$.
+
+Suppose you want $\hat{y}(x) = \sigma(Wx + B)$ for some real-valued affine map with coefficients $W, B$ fixed before $x$, where $\sigma : z \mapsto \frac{\exp(z)}{1 + \exp(z)}$ is the _sigmoid function_. In other words, you want to find $W$ and $B$ that maximise the likelihood $\prod_{j = 1}^n \sigma(Wx_j+B) y_j + (1 - \sigma(Wx_j + B))(1-y_j)$. Since $Y_x$ can only take values $0$ and $1$, the log of the probability is $\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j)$. The $\log$-likelihood is therefore:
+$$\sum_{j = 1}^n \left(\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right),$$
+and the cost function we want to minimise is associated with the cross-entropy loss function:
+$$\sum_{j = 1}^n \left(-\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right).$$

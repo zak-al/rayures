@@ -1,3 +1,25 @@
 project:
   type: website
   output-dir: docs
+
+theme:
+  - flatly
+  - custom.scss
+
+website:
+  title: "Rayures"
+
+format:
+  html:
+    number-sections: true
+    html-math-method: katex
+    page-layout: article
+    css: styles.css
+    toc: true
+    toc-depth: 2
+    toc-title: "**Sections**"
+    code-overflow: wrap
+    highlight-style: github-dark
+    code-block-background: true
+    link-external-newwindow: true
+    embed-resources: true

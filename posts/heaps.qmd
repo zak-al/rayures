@@ -1,0 +1,264 @@
+---
+title: What are heaps and how to implement them in C++
+categories:
+    - Computer Science
+    - Data Structures
+---
+
+This article introduces heaps and shows how to implement them and the basic operations they support in C++.
+
+# Motivation
+
+The goal of a heap is to store elements of an ordered type in a way that optimises the following operations:
+
+- accessing and removing the smallest element;
+- inserting a new element;
+- removing an element.
+
+Many algorithms can be implemented using heaps, like Dijkstra’s shortest-path algorithm and Huffman codes.
+Since the greatest element of a set with respect to some order relation $\le$ is the smallest element of the set with respect to the inverse relation $\ge$, it is of course possible to use a heap to find the greatest element of a set of values as well.
+
+# Implementing the container
+
+We implement heaps as _nearly-complete binary trees_. Informally (and we’ll content ourselves with an informal definition), a binary tree is said to be _nearly complete_ if every depth level is entirely filled, except maybe for the the bottom-most level where all of the nodes are grouped on the left.
+
+![Examples of nearly-complete and non-nearly-complete binary trees.](../images/heaps/nearly_complete.png "Examples of nearly-complete and non-nearly-complete binary trees.One is not nearly-complete because a node has a right child but no left child, so all nodes are not grouped to the left. Another is not nearly-complete because nodes are across four levels, with only two nodes on the penultimate level instead of four.")
+
+In the image above, the purple tree and the blue tree are both nearly complete (the purple one is even complete!) but the orange and the red trees are not. The orange tree is not nearly complete because the penultimate level is not filled. The red tree is not nearly complete because the nodes of the last level are not grouped to the left.
+
+An advantage of nearly-complete binary trees is that they are characterised by a practical ordering of their nodes. More precisely, every nearly-complete binary tree can be represented as an array of nodes that contains all the information held by the tree. Such array is built by appending all the nodes one after another, from the top to the bottom and from the left to the right. Here is an example of a nearly-complete binary tree and its representation as an array.
+
+![Illustration of a nearly-complete tree and its encoding as a string.](../images/heaps/structure.png "Illustration of a nearly-complete tree and its encoding as an array.")
+
+Note that the indexing set of the array starts at 1. We’ll see later why it matters.
+Using the array representation of a nearly-complete binary tree and the number of nodes, we can check whether the node at index i has a parent, a left child and a right child and if it has one, find its index. All this takes constant time.
+Let’s say we want to find the left child of some node N, which is the i-th node (numbered from left to right) at depth d, assuming it exists. We start by calculating the position of the node in the array:
+
+$$ \overbrace{1}^{\text{$N$ itself}} + \overbrace{(i - 1)}^{\text{nodes on the left of $N$}} + \overbrace{\sum_{k = 0}^{d - 1} 2^k}^{\text{nodes strictly above $N$}} = i + 2^d - 1. $$
+
+Note that we had to add $1$ for $N$ itself because the indices of the array start at $1$.
+We now want to go through all the element of the array until we find the left child of $N$, assuming it has one. First, we consume the nodes to the right of N: there are $(2^d)-i$ nodes. Since $N$ has a left child, by definition of a nearly-complete binary tree we know that every node to the left of $N$ ($i-1$ nodes in total) has two children. Therefore, we have to go through $2(i-1)$ additional nodes. The left child of $N$ lies at the next index, i.e. at index $i+(2^d)-1 + (2^d)-i+2(i-1)+1 = 2 * (2^d+i-1)$.
+
+To summarise, we can say that if $N$ is at index $k$ and there are $n$ nodes in the tree then:
+
+- if $2k \le n$ then $N$ has a left child and it lies at index $2k$ ;
+- otherwise, $N$ has no left child.
+
+This property enables to find the index of the right child and the parent of the $k$-th node as well:
+
+- if $2k + 1 \le n$ then $N$ has a right child, which is at index $2k + 1$ ;
+- if $2k + 1 > n$ then it has no right child ;
+- if $k = 1$ then it has no parents (obviously!) ;
+- if $k > 1$ then it has a parent which lies at index $k/2$, where $\cdot/\cdot$ denotes integer division.
+
+Another advantage of nearly-complete binary trees is that their height grows as fast as the logarithm of their size, i.e. $h = Θ(n)$, where $h$ is the height and $n$ is the number of nodes.
+With that in mind, we can define a structure ```Heap``` that contains a vector representing the tree, an integer containing the size of the tree and functions to access the parent and children of a node given its index.
+
+```c++
+#include <vector>
+#include <optional>
+
+template<typename T>
+struct Heap {
+    std::vector<T> array;
+    size_t n;
+
+    Heap() {
+        array = std::vector<T>(1);
+        n = 0;
+    }
+
+    std::optional<T> getParent(size_t i) {
+        if (i <= 1) return {};
+        return array[i / 2];
+    }
+
+    std::optional<T> getLeftChild(size_t i) {
+        size_t leftChildIndex = 2 * i;
+        if (leftChildIndex <= n) {
+            return array[leftChildIndex];
+        } else {
+            return {};
+        }
+    }
+
+    std::optional<T> getRightChild(size_t i) {
+        size_t leftChildIndex = 2 * i + 1;
+        if (leftChildIndex <= n) {
+            return array[leftChildIndex];
+        } else {
+            return {};
+        }
+    }
+}
+```
+
+If we want to store n values in the heap then the array will contain at least $n+1$ elements: ```array[0]``` is unused and ```array[1] ... array[n]``` is the representation of the nearly-complete binary tree. If there are more elements, the entries ```array[k]``` for $k > n$ are not used until we want to add more elements.
+We use the class optional from the standard library to return the value of the parent or child if it exists and an indicator that node $i$ has no parent, no left child or no right child if it is the case.
+
+# Finding and removing the minimum
+
+In order to implement a heap, we want the trees we’ll be using to satisfy an additional property, which we’ll refer to as the _heap property_. It states that the parent of every node $N$ other than the root must be less than or equal to $N$. In other words, the tree must be increasing with respect to the ancestor relation: if the nodes that contains $N$ is an ancestor of the node that contains $M$ then $N \le M$.
+
+## Accessing
+
+It follows from the heap property that the smallest element of the set of nodes is always the root. This allows us to perform ```min-peek``` in constant time, simply by accessing an element of the array by its index.
+
+```c++
+std::optional<T> peek() {
+    if (n == 0) {
+        return {};
+    }
+
+    return array[1];
+}
+```
+
+## Removing
+
+Here is a rough description of the algorithm we use to delete the minimum:
+
+1. replace the root of the tree with the last element in the tree;
+2. while the last element has at least one child and is greater than one of its children, swap it with its smallest child.
+
+The image below shows the configuration of a heap throughout the execution of this algorithm.
+
+![Illustration of the pop procedure.](../images/heaps/removing.png "Illustration of the pop procedure.")
+
+This algorithm runs in linear time with respect to the height of the heap, i.e. in logarithmic time with respect to the number of elements in the heap.
+
+To implement it in C++, we start by defining the function ```rearrangeDown``` that takes the index of a node and swaps it with its smallest child if appropriate (i.e. if it is not already smaller than its children). It returns the new position of the input node.
+
+```c++
+size_t rearrangeDown(size_t i) {
+    size_t m = i;
+    std::optional<T> l = getLeftChild(i);
+    std::optional<T> r = getRightChild(i);
+    if (l.has_value() && l.value() < array[i]) {
+        m = 2 * i;
+    }
+    if (r.has_value() && r.value() < array[m]) {
+        m = 2 * i + 1;
+    }
+
+    if (m != i) {
+        std::swap(array[m], array[i]);
+        return m;
+    }
+
+    return i;
+}
+```
+
+```m``` denotes the smallest value between the node at position ```i```, its left child (if it has one) and its right child (if it has one).
+If ```i``` has two children ```X``` and ```Y``` and the trees rooted at ```X``` and at ```Y``` both satisfy the heap property, then it can be proved that the tree rooted at ```i``` after executing ```i = rearrangeDown(i)``` until ```rearrangeDown(i) == i``` satisfies the heap property as well.
+
+We now implement pop as follows:
+
+```c++
+std::optional<T> pop() {
+    if (n == 0) {
+        return {};
+    }
+
+    T m = array[1];
+
+    array[1] = array[n];
+    size_t i {1};
+    while (true) {
+        size_t newIdx = rearrangeDown(i);
+        if (newIdx == i) break;
+        i = newIdx;
+    }
+
+    --n;
+
+    return m;
+}
+```
+
+# Inserting an element
+
+Insertion is very similar to deletion. This time, we’ll use a sub-procedure ```rearrangeUp``` that swaps a node with its parent if it enables to maintain the heap property. It is implemented like ```rearrangeDown```, except that that there is only one value to compare the node with.
+
+```c++
+size_t rearrangeUp(size_t i) {
+    std::optional<T> p = getParent(i);
+    if (p.has_value() && p.value() > array[i]) {
+        std::swap(array[i], array[i / 2]);
+        return i / 2;
+    }
+
+    return i;
+}
+```
+
+We can use this procedure to implement ```insert```, which runs in logarithmic in $n$ as well.
+
+```c++
+void insert(T value) {
+    ++n;
+    if (n < array.size()) {
+        array.push_back(value);
+    } else {
+        array[n] = value;
+    }
+
+    size_t i {n};
+    while (true) {
+        size_t newIdx = rearrangeUp(i);
+        if (newIdx == i) break;
+        i = newIdx;
+    }
+}
+```
+
+# Heapify
+
+We can use ```insert``` to turn an unsorted list into a heap in linearithmic time (the complexity can be derived using the fact that $\sum_{k = 1}^n \log(k)$ is asymptotically equivalent to $n log(n)$, i.e. $\frac{\log(n!)}{n \log(n)} \to 1$). But we can do better! This section shows how to implement the procedure ```heapify``` which turns a list into a heap in linear time (with respect to the length of the list).
+
+## Algorithm
+
+Let’s start with an example. Consider the following nearly-complete binary tree.
+
+![A nearly-complete tree to heapify.](../images/heaps/heapify.png "A nearly-complete tree to heapify.")
+
+The leaves are clearly roots of heaps. If the list we want to heapify has length $n$ then a node $k$ is a leaf if and only if $2k > n$, i.e. if and only if $k \ge n/2 + 1$ (where $\cdot / \cdot$ again denotes euclidean division).
+We want to make every other node the root of a heap. Let’s start with $3$. $3$ is less than $6$ so $(3, 6)$ satisfies the heap property.
+Moving to $4$. $4$ is greater than one of its children (both!), so we swap it with its smallest child, $1$. $4$ is now a leaf, so it is indeed the root of a heap. Since the tree rooted at $2$ and the tree rooted at 1 were both heaps, the tree rooted at $1$ in the updated tree is a heap as well.
+The last node we need to consider is $5$. Since $5 > 3 > 1$, we swap $5$ with $1$. $5$ is still greater than its children ($2$ and $4$); so we swap $5$ with $2$. $5$ is now a leaf, and the whole tree has become a heap.
+
+We implement it as follows:
+
+```c++
+template<typename T>
+Heap<T> heapify(std::vector<T> data) {
+    Heap<T> heap;
+    heap.n = data.size();
+    heap.array = {0};
+    for (T x: data) {
+        heap.array.push_back(x);
+    }
+
+    for (size_t i = heap.n / 2; i > 0; --i) {
+        size_t k;
+        size_t j {i};
+        while ((k = heap.rearrangeDown(j)) != j) {
+            j = k;
+        }
+    }
+
+    return heap;
+}
+```
+
+Lines 11 to 15 do exactly the same as lines 9 to 14 in the ```insert``` procedure, i.e. it rearrange down the node which is originally at position ```i``` until ```rearrangeDown``` does not change its position.
+
+## Analysis
+
+The sub-procedure in lines 11 to 16 runs in $O(\text{height}(i))$ time, for every $i$ between $1$ and $n/2$.
+Let $H$ be the height of the heap, i.e. $H = \lfloor \log_2(n) \rfloor$. For every height $h$ between $1$ and $H$ (we’re not considering nodes with height $0$), there are $2^{H-h}$ nodes with height $h$ and running the procedure on each of them incurs a cost bounded by $h$. Therefore, each height $h$ incurs a cost bounded by $h2^{H-h}$ and the overall complexity is given by:
+
+$$\sum_{k = 1}^H h 2^{H-h} = n \sum_{k = 0}^H h\frac1{2^h}.$$
+
+Since $\sum h\frac{1}{2^h}$ converges (which can be shown using an argument involving differentiation of power series), the complexity is linear in the size $n$ of the tree.

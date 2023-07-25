@@ -12,5 +12,271 @@
     "title": "Hello",
     "section": "",
     "text": "Bien.\n\\(1 + 3 =\\)"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Rayures",
+    "section": "",
+    "text": "An introduction to vector calculus\n\n\n\nMaths\n\n\nMachine learning\n\n\n\n\n\n\n\n\n\n\n\nWhat are heaps and how to implement them in C++\n\n\n\nComputer Science\n\n\nData Structures\n\n\n\n\n\n\n\n\n\n\n\nAn introduction to maximum likelihood estimation and applications to machine learning\n\n\n\nStatistics\n\n\nMachine learning\n\n\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/hello.html",
+    "href": "posts/hello.html",
+    "title": "Hello",
+    "section": "",
+    "text": "Bien.\n1 + 3 ="
+  },
+  {
+    "objectID": "posts/hello.html#comment-allez-vous",
+    "href": "posts/hello.html#comment-allez-vous",
+    "title": "Hello",
+    "section": "",
+    "text": "Bien.\n1 + 3 ="
+  },
+  {
+    "objectID": "posts/heaps.html",
+    "href": "posts/heaps.html",
+    "title": "What are heaps and how to implement them in C++",
+    "section": "",
+    "text": "This article introduces heaps and shows how to implement them and the basic operations they support in C++."
+  },
+  {
+    "objectID": "posts/heaps.html#accessing",
+    "href": "posts/heaps.html#accessing",
+    "title": "What are heaps and how to implement them in C++",
+    "section": "3.1 Accessing",
+    "text": "3.1 Accessing\nIt follows from the heap property that the smallest element of the set of nodes is always the root. This allows us to perform min-peek in constant time, simply by accessing an element of the array by its index.\nstd::optional&lt;T&gt; peek() {\n    if (n == 0) {\n        return {};\n    }\n\n    return array[1];\n}"
+  },
+  {
+    "objectID": "posts/heaps.html#removing",
+    "href": "posts/heaps.html#removing",
+    "title": "What are heaps and how to implement them in C++",
+    "section": "3.2 Removing",
+    "text": "3.2 Removing\nHere is a rough description of the algorithm we use to delete the minimum:\n\nreplace the root of the tree with the last element in the tree;\nwhile the last element has at least one child and is greater than one of its children, swap it with its smallest child.\n\nThe image below shows the configuration of a heap throughout the execution of this algorithm.\n\n\n\nIllustration of the pop procedure.\n\n\nThis algorithm runs in linear time with respect to the height of the heap, i.e. in logarithmic time with respect to the number of elements in the heap.\nTo implement it in C++, we start by defining the function rearrangeDown that takes the index of a node and swaps it with its smallest child if appropriate (i.e. if it is not already smaller than its children). It returns the new position of the input node.\nsize_t rearrangeDown(size_t i) {\n    size_t m = i;\n    std::optional&lt;T&gt; l = getLeftChild(i);\n    std::optional&lt;T&gt; r = getRightChild(i);\n    if (l.has_value() && l.value() &lt; array[i]) {\n        m = 2 * i;\n    }\n    if (r.has_value() && r.value() &lt; array[m]) {\n        m = 2 * i + 1;\n    }\n\n    if (m != i) {\n        std::swap(array[m], array[i]);\n        return m;\n    }\n\n    return i;\n}\nm denotes the smallest value between the node at position i, its left child (if it has one) and its right child (if it has one). If i has two children X and Y and the trees rooted at X and at Y both satisfy the heap property, then it can be proved that the tree rooted at i after executing i = rearrangeDown(i) until rearrangeDown(i) == i satisfies the heap property as well.\nWe now implement pop as follows:\nstd::optional&lt;T&gt; pop() {\n    if (n == 0) {\n        return {};\n    }\n\n    T m = array[1];\n\n    array[1] = array[n];\n    size_t i {1};\n    while (true) {\n        size_t newIdx = rearrangeDown(i);\n        if (newIdx == i) break;\n        i = newIdx;\n    }\n\n    --n;\n\n    return m;\n}"
+  },
+  {
+    "objectID": "posts/heaps.html#algorithm",
+    "href": "posts/heaps.html#algorithm",
+    "title": "What are heaps and how to implement them in C++",
+    "section": "5.1 Algorithm",
+    "text": "5.1 Algorithm\nLet’s start with an example. Consider the following nearly-complete binary tree.\n\n\n\nA nearly-complete tree to heapify.\n\n\nThe leaves are clearly roots of heaps. If the list we want to heapify has length n then a node k is a leaf if and only if 2k &gt; n, i.e. if and only if k \\ge n/2 + 1 (where \\cdot / \\cdot again denotes euclidean division). We want to make every other node the root of a heap. Let’s start with 3. 3 is less than 6 so (3, 6) satisfies the heap property. Moving to 4. 4 is greater than one of its children (both!), so we swap it with its smallest child, 1. 4 is now a leaf, so it is indeed the root of a heap. Since the tree rooted at 2 and the tree rooted at 1 were both heaps, the tree rooted at 1 in the updated tree is a heap as well. The last node we need to consider is 5. Since 5 &gt; 3 &gt; 1, we swap 5 with 1. 5 is still greater than its children (2 and 4); so we swap 5 with 2. 5 is now a leaf, and the whole tree has become a heap.\nWe implement it as follows:\ntemplate&lt;typename T&gt;\nHeap&lt;T&gt; heapify(std::vector&lt;T&gt; data) {\n    Heap&lt;T&gt; heap;\n    heap.n = data.size();\n    heap.array = {0};\n    for (T x: data) {\n        heap.array.push_back(x);\n    }\n\n    for (size_t i = heap.n / 2; i &gt; 0; --i) {\n        size_t k;\n        size_t j {i};\n        while ((k = heap.rearrangeDown(j)) != j) {\n            j = k;\n        }\n    }\n\n    return heap;\n}\nLines 11 to 15 do exactly the same as lines 9 to 14 in the insert procedure, i.e. it rearrange down the node which is originally at position i until rearrangeDown does not change its position."
+  },
+  {
+    "objectID": "posts/heaps.html#analysis",
+    "href": "posts/heaps.html#analysis",
+    "title": "What are heaps and how to implement them in C++",
+    "section": "5.2 Analysis",
+    "text": "5.2 Analysis\nThe sub-procedure in lines 11 to 16 runs in O(\\text{height}(i)) time, for every i between 1 and n/2. Let H be the height of the heap, i.e. H = \\lfloor \\log_2(n) \\rfloor. For every height h between 1 and H (we’re not considering nodes with height 0), there are 2^{H-h} nodes with height h and running the procedure on each of them incurs a cost bounded by h. Therefore, each height h incurs a cost bounded by h2^{H-h} and the overall complexity is given by:\n\\sum_{k = 1}^H h 2^{H-h} = n \\sum_{k = 0}^H h\\frac1{2^h}.\nSince \\sum h\\frac{1}{2^h} converges (which can be shown using an argument involving differentiation of power series), the complexity is linear in the size n of the tree."
+  },
+  {
+    "objectID": "posts/bloom_filters.html",
+    "href": "posts/bloom_filters.html",
+    "title": "What are bloom filters and how to implement them in C++",
+    "section": "",
+    "text": "This article introduces Bloom filters, a probabilistic data structure that allows to store values and check whether a value is likely to be in the structure without having to store all the objects it contains. More precisely, given a value v, a bloom filter can either certify that it does not contain v, or say that it may contain it. It uses hash functions to encode data and\nHere are examples of applications of bloom filter:"
+  },
+  {
+    "objectID": "posts/multivariate_calculus.html",
+    "href": "posts/multivariate_calculus.html",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "",
+    "text": "This article introduces the theory of vector calculus, which is particularly useful for its applications to machine learning. We’ll define what it means for a function from a real vector space onto another to be differentiable, state several theorems that allow to find calculate the differential of such a function and see how it connects to partial derivative in the case of finitely-generated vector spaces. We’ll give examples inspired by problems encountered in machine learning, and state some specific results that are useful from a computational perspective."
+  },
+  {
+    "objectID": "posts/multivariate_calculus.html#definition-and-examples",
+    "href": "posts/multivariate_calculus.html#definition-and-examples",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "1.1 Definition and examples",
+    "text": "1.1 Definition and examples"
+  },
+  {
+    "objectID": "posts/multivariate_calculus.html#calculating-differentials",
+    "href": "posts/multivariate_calculus.html#calculating-differentials",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "1.2 Calculating differentials",
+    "text": "1.2 Calculating differentials"
+  },
+  {
+    "objectID": "posts/multivariate_calculus.html#section",
+    "href": "posts/multivariate_calculus.html#section",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "1.3 ",
+    "text": "1.3"
+  },
+  {
+    "objectID": "posts/vector_calculus.html",
+    "href": "posts/vector_calculus.html",
+    "title": "An introduction to vector calculus",
+    "section": "",
+    "text": "This article introduces the theory of vector calculus. We’ll define what it means for a function from a real vector space onto another to be differentiable, state several theorems that allow to calculate the differential of a differentiable function and see how differentials connect to partial derivatives in the case of finitely-generated vector spaces."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#definition-and-examples",
+    "href": "posts/vector_calculus.html#definition-and-examples",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "1.1 Definition and examples",
+    "text": "1.1 Definition and examples\nLet U and V be vector spaces over the reals and let f : U \\to V be a function. Let x_0 \\in U. f is said to be differentiable at x_0 if there exists a continuous linear map D_{x_0} : U \\to V such that the function\n\\begin{align*}\nU \\setminus \\{0\\} &\\to V\\\\\n\\delta &\\mapsto \\frac{f(x_0 + h) - f(x_0) - D_{x_0}(\\delta)}{\\|\\delta\\|}\n\\end{align*}\ntends to 0 at 0.\nIf f is a differential function at point x_0 then it can be shown that there exists a unique map D_{x_0} that satisfies the above conditions.\nIf U is finitely generated then every linear map from U onto another real vector space is continuous, so we don’t need to prove it separately.\nThe definition assumes the choice of a norm over each of the two spaces. Remember that if a vector space is finitely generated then all norms on this space define the same limits of functions, so you may choose whichever norm you fancy the most.\nThis definition generalises the concept of differentiability and derivatives for real functions, in the sense that f : \\mathbb R \\to \\mathbb R has a derivative f'(x_0) at point x_0 if and only if it is differentiable (as per the above definition) with differential \\delta \\mapsto f'(x_0)\\delta.\nHere are a few examples of differentiable functions.\n\nEvery continuous linear map is differentiable everywhere, and its differential at any point is itself.\nIf \\phi is linear and continuous and f is differentiable at x_0, then \\phi \\circ f is differentiable at x_0 and its differential is \\phi \\circ D_{x_0}f\nLet f be the function that maps a square matrix A \\in \\R^{n, n} to its square A \\times A \\in \\R^{n, n}. We have : f(A + \\delta) = (A + \\delta)^2 = f(A) + A\\delta + \\delta A + \\delta^2 for all \\delta \\in \\R^{n, n} and any A \\in \\R^{n, n}. Therefore, f(A + \\delta) - f(A) = A\\delta + \\delta A + \\delta^2. \\frac{\\delta^2}{\\|\\delta\\|} \\xrightarrow[\\delta \\to 0, \\delta \\neq 0]{} 0 since there exists a sub-multiplicative norm on \\R^{n, n}. Therefore, f is differentiable and its differential at point A is \\delta \\mapsto A\\delta + \\delta A.\nLet u : \\R \\to \\R be a differentiable function and let f : \\R^{n, p} \\to \\R^{n, p} be the map that applies the function u to every cell of its input, i.e. f((a_{i, j})_{1 \\le i \\le n, 1 \\le j \\le p}) = (u(a_{i, j}))_{1 \\le i \\le n, 1 \\le j \\le p}. Then f is differentiable at every point A \\in \\R^{n, p}, and its differential is \\delta \\mapsto u'(A) \\odot \\delta, where u'(A) is the matrix constructed by applying u' to every entry of A and \\odot denotes the Hadamard product, i.e. cell-wise multiplication. This can be generalised by replacing u by an n \\times p matrix of functions and defining f by applying the function u_{i, j} to the entry A_{i, j} of the input matrix."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#calculating-differentials",
+    "href": "posts/vector_calculus.html#calculating-differentials",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "1.1 Calculating differentials",
+    "text": "1.1 Calculating differentials\nIn this section, we state some useful results which provide rules to calculate differentials."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#definition",
+    "href": "posts/vector_calculus.html#definition",
+    "title": "An introduction to vector calculus",
+    "section": "2.1 Definition",
+    "text": "2.1 Definition\nLet U and V be real vector spaces, with U being finitely generated with dimension n \\ge 1. Given a fixed canonical basis (e_1, \\mathellipsis, e_n) of U, we say that a function f : U \\to V admits an i-th partial derivative at point x if the function\n\\begin{align*}\n\\lambda \\mapsto \\frac{f(x + \\lambda e_i) - f(x)}{\\lambda}\n\\end{align*}\nhad a limit at 0.\nThe i-th partial derivative at x_0 is then the limit of the above function. \\partial_i f denotes the function that maps x \\in U to the i- th partial derivative of f at x."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#section",
+    "href": "posts/vector_calculus.html#section",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.2 ",
+    "text": "2.2"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#partial-derivatives-and-diffe",
+    "href": "posts/vector_calculus.html#partial-derivatives-and-diffe",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.2 Partial derivatives and diffe",
+    "text": "2.2 Partial derivatives and diffe"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#partial-derivatives-and-differentials",
+    "href": "posts/vector_calculus.html#partial-derivatives-and-differentials",
+    "title": "An introduction to vector calculus",
+    "section": "2.2 Partial derivatives and differentials",
+    "text": "2.2 Partial derivatives and differentials\nIt can be shown that if a function is differentiable at point x_0 then it admits an i-th partial derivative at x_0, for every i. The converse is not true, however it is sufficient to admit continuous partial derivatives along every component at some point x_0 to be differentiable at x_0. Moreover, the i-th partial derivative of f at x_0 is given by D_{x_0}f(e_i). This means that if V is finitely generated as well then the matrix of D_{x_0}f is (\\partial_j f_i(x_0))_{1 \\le i \\le \\dim(V), 1 \\le j \\le n}. This matrix is known as the Jacobian matrix (of f, at point x_0), that we’ll denote [D_{x_0}f] (or [D_{x_0}f]_{(e_i)} is the choice of the canonical basis is not trivial), or J_{x_0}(f).\nThis result is useful because it allows to effectively store the differential of a function as a matrix.\nIt then follows from the calculation rules we saw earlier that the Jacobian matrix of a linear combination of two functions is the linear combination of their Jacobians, and that the Jacobian of the composition g \\circ f at point x_0 is: [D_{x_0}(g\\circ f)] = [D_{f(x_0)}g] [D_{x_0}f], where juxtaposition denotes matrix multiplication."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#juggling-between-matrices-and-their",
+    "href": "posts/vector_calculus.html#juggling-between-matrices-and-their",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.3 Juggling between matrices and their",
+    "text": "2.3 Juggling between matrices and their"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#juggling-between-matrices-and-their-representation",
+    "href": "posts/vector_calculus.html#juggling-between-matrices-and-their-representation",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.3 Juggling between matrices and their representation",
+    "text": "2.3 Juggling between matrices and their representation"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#juggling-between-matrices-and-their-representations",
+    "href": "posts/vector_calculus.html#juggling-between-matrices-and-their-representations",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.3 Juggling between matrices and their representations",
+    "text": "2.3 Juggling between matrices and their representations"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#the-uninteresting-stuff",
+    "href": "posts/vector_calculus.html#the-uninteresting-stuff",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "3.1 The uninteresting stuff",
+    "text": "3.1 The uninteresting stuff"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#the-non-uninteresting-stuff",
+    "href": "posts/vector_calculus.html#the-non-uninteresting-stuff",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "3.2 The non-uninteresting stuff",
+    "text": "3.2 The non-uninteresting stuff"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#gradient-of-maps-from-matrices-to-scalars",
+    "href": "posts/vector_calculus.html#gradient-of-maps-from-matrices-to-scalars",
+    "title": "An introduction to vector calculus for machine learning",
+    "section": "2.3 Gradient of maps from matrices to scalars",
+    "text": "2.3 Gradient of maps from matrices to scalars\nWe define (E_i)_{i = 1}^{\\text{out} \\times \\text{in}} the canonical basis of \\R^{\\text{out}, \\text{in}}, with the convention that we start by filling the rows and then the columns: for example, the canonical basis of \\R^{2, 2} is \\left(\\begin{pmatrix}1&0\\\\0&0\\end{pmatrix}, \\begin{pmatrix}0&1\\\\0&0\\end{pmatrix}, \\begin{pmatrix}0&0\\\\1&0\\end{pmatrix}, \\begin{pmatrix}0&0\\\\0&1\\end{pmatrix}\\right).\nGiven a matrix M \\in \\R^{n, p}, [M] \\in \\R^{np, 1} denotes its representation as a column vector in the basis (E_i). For example, the representation of \\begin{pmatrix}1&2\\\\3&4\\\\5&6\\end{pmatrix} is \\begin{pmatrix}1&2&3&4&5&6\\end{pmatrix}^T.\nIf we consider a differentiable function f : \\R^n \\to \\R, its Jacobian lies in \\R^{1, n}. We often prefer to represent it as a column vector rather than a row, so we define the gradient of f as the transpose of its Jacobian. The goal of this subsection is to extend this definition to a function f : \\R^{n, p} \\to \\R. More precisely, given a matrix X_0 at which f is differentiable, we want to see how the matrix D \\in \\R^{n, p} such that D_{i, j} = \\partial_{i, j}f(X_0) (i.e. the partial derivative with respect to the (i, j)-th coefficient of the input matrix) behaves and connects to what we saw earlier."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#introduction",
+    "href": "posts/vector_calculus.html#introduction",
+    "title": "An introduction to vector calculus",
+    "section": "3.1 Introduction",
+    "text": "3.1 Introduction\nLet n, p \\in \\N^*. We define (E_i)_{i = 1}^{np} the canonical basis of \\R^{n, p}, with the convention that we start by filling the rows and then the columns: for example, the canonical basis of \\R^{2, 2} is \\left(\\begin{pmatrix}1&0\\\\0&0\\end{pmatrix}, \\begin{pmatrix}0&1\\\\0&0\\end{pmatrix}, \\begin{pmatrix}0&0\\\\1&0\\end{pmatrix}, \\begin{pmatrix}0&0\\\\0&1\\end{pmatrix}\\right).\nGiven a matrix M \\in \\R^{n, p}, [M] \\in \\R^{np, 1} denotes its representation as a column vector in the basis (E_i). For example, the representation of \\begin{pmatrix}1&2\\\\3&4\\\\5&6\\end{pmatrix} is \\begin{pmatrix}1&2&3&4&5&6\\end{pmatrix}^T.\nIf we consider a differentiable function f : \\R^n \\to \\R, its Jacobian lies in \\R^{1, n}. We often prefer to represent it as a column vector rather than a row, so we define the gradient of f as the transpose of its Jacobian. We can extend this definition to a function f : \\R^{n, p} \\to \\R. More precisely, given a matrix X_0 at which f is differentiable at some point X_0, we consider the matrix D \\in \\R^{n, p} such that D_{i, j} = \\partial_{i, j}f(X_0) (i.e. the partial derivative with respect to the (i, j)-th coefficient of the input matrix). This matrix can be constructed from the Jacobian of f, which lies in \\R^{1, n \\times p}, by rearranging its elements (which formally corresponds to switching from the coordinate representation to the actual matrix). For example, \\begin{pmatrix}1&2&3&4&5&6\\end{pmatrix} for n = 2 and p = 3 becomes \\begin{pmatrix}1&2&3\\\\4&5&6\\end{pmatrix}."
+  },
+  {
+    "objectID": "posts/vector_calculus.html#example",
+    "href": "posts/vector_calculus.html#example",
+    "title": "An introduction to vector calculus",
+    "section": "3.3 Example",
+    "text": "3.3 Example\nWe consider matrices X \\in \\R^{\\text{in}, N} and B \\in \\R^{\\text{out}, N}. Given a weight matrix W \\in \\R^{\\text{out}, \\text{in}} and a matrix of expected values y^* \\in \\R^{\\text{out}, N}, let J(W) denote: \\frac1N \\sum_{j = 1}^N \\|\\sigma(WX + B) - y^*\\|_2^2, where \\|\\cdot\\|_2 denotes the Euclidean norm and \\sigma is an activation function, i.e. a differentiable function from \\R onto \\R which is applied to every cell of the matrix.\nOur goal is to calculate the Jacobian of J at an arbitrary point W.\nIt can be shown that for all W, J(W) = \\frac1N \\text{Tr}\\left(\\Delta^T\\Delta\\right), where \\Delta = \\sigma(WX + B) - y^*. It is also more convenient to take the transpose of the matrices, i.e. \\Delta = \\sigma(X^TW^T + B^T) - \\left(y^*\\right)^T, which doesn’t change the function because cell-wise application of a real function is invariant under tranpose and \\text{Tr}\\left(M\\right) = \\text{Tr}\\left(M^T\\right) for every matrix M.\nSince we want to calculate the Jacobian of J and not any sort of expression of its differential, it is convenient to view matrices through their representation within a certain basis.\nLet’s start with the trace of an \\text{out} by \\text{out} matrix. The trace is affine with slope 1 with respect to every diagonal entry of its parameter, and constant with respect to every other entry. Its Jacobian matrix is therefore [\\text{Id}_{\\text{out}^2}]^T \\in \\R^{1, \\text{out}^2} (at any point, since \\text{Tr} is linear). It is a row vector, since it is the matrix of a linear map taking values in \\R.\nLet now f(\\Delta) = \\Delta^T\\Delta for \\Delta \\in \\R^{N, \\text{out}}. f is differentiable and its differential is \\delta \\mapsto \\Delta^T\\delta + \\delta^T\\Delta. The differential is a linear map from \\R^{N, \\text{ out}} onto \\R^{\\text{out}, \\text{ out}} so the Jacobian [D_\\Delta f] is in \\R^{\\text{out}^2,\\ N\\times\\text{out}}.\nThe differential of J with respect to \\Delta (the variable) at point \\Delta (the value) is then [\\text{Id}_{\\text{out}^2}]^T [D_\\Delta f]. Let \\delta \\in \\R^{N,\\ \\text{out}} and [\\delta] \\in \\R^{N \\times \\text{out}, 1} its representation. We know that [D_\\Delta f][\\delta] = [\\Delta^T \\delta + \\delta^T \\Delta] \\in \\R^{\\text{out}^2, 1}.\nWe start by writing [W^T] \\in \\R^{\\text{in} \\times \\text{out}, 1} (where \\times should be read as integer multiplication — this is a column vector with \\text{in} \\times \\text{out} entries!) the representation of W^T. The differential of W \\mapsto X^TW^T + B^T is \\delta \\mapsto X^T\\delta for \\delta \\in \\R^{\\text{in}, \\text{out}}. The Jacobian of the affine component of J is therefore [X^T]"
+  },
+  {
+    "objectID": "posts/vector_calculus.html#our-approach",
+    "href": "posts/vector_calculus.html#our-approach",
+    "title": "An introduction to vector calculus",
+    "section": "3.2 Our approach",
+    "text": "3.2 Our approach\nWe’ll build a class Matrix that extends numpy.ndarray. Instances of this class have a status: constant or variable. When performing some basic operations (for our purpose, we’ll only consider matrix multiplication, linear combinations, trace and transpose), it keeps tracks of the matrix of the differential of the operation with respect to the variable matrices it contains."
+  },
+  {
+    "objectID": "posts/max_likelihood.html",
+    "href": "posts/max_likelihood.html",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "",
+    "text": "The maximum likelihood paradigm describes a rule to find a distribution that best fits a set of examples among a parametrised set of distributions. This article defines maximum likelihood estimators and gives two examples of learning models motivated by this paradigm."
+  },
+  {
+    "objectID": "posts/max_likelihood.html#approach-to",
+    "href": "posts/max_likelihood.html#approach-to",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 Approach to",
+    "text": "1.1 Approach to"
+  },
+  {
+    "objectID": "posts/max_likelihood.html#section",
+    "href": "posts/max_likelihood.html#section",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 ",
+    "text": "1.1"
+  },
+  {
+    "objectID": "posts/max_likelihood.html#approximating",
+    "href": "posts/max_likelihood.html#approximating",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 Approximating",
+    "text": "1.1 Approximating"
+  },
+  {
+    "objectID": "posts/max_likelihood.html#approximating-inputoutput-pairs",
+    "href": "posts/max_likelihood.html#approximating-inputoutput-pairs",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 Approximating input/output pairs",
+    "text": "1.1 Approximating input/output pairs"
+  },
+  {
+    "objectID": "posts/max_likelihood.html#approximating-distribution-of-inputoutput-pairs",
+    "href": "posts/max_likelihood.html#approximating-distribution-of-inputoutput-pairs",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 Approximating distribution of input/output pairs",
+    "text": "1.1 Approximating distribution of input/output pairs"
+  },
+  {
+    "objectID": "posts/max_likelihood.html#approximating-distribution-of-inputoutput-pairs-with-conditional-maximumum-likelihood",
+    "href": "posts/max_likelihood.html#approximating-distribution-of-inputoutput-pairs-with-conditional-maximumum-likelihood",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.3 Approximating distribution of input/output pairs with conditional maximumum likelihood",
+    "text": "1.3 Approximating distribution of input/output pairs with conditional maximumum likelihood\nSimilarly, we can use the maximum likelihood paradigm to find a distribution that best describes a set of observations of the form \\{(x_1, y_1), \\mathellipsis, (x_n, y_n)\\}, where y_j is viewed as an output associated with input x_j. For every x_j, we consider the density functions f_\\vartheta(\\cdot | x_j) across all \\vartheta \\in \\Theta. We then define the likelihood of the set of observations for parameter \\vartheta as the density function of the random vector sequence (Y_1, \\mathellipsis, Y_n), where Y_j \\sim f_\\theta(\\cdot | x_j), evaluated at (y_1, \\mathellipsis, y_n) i.e. L(\\vartheta) = \\prod_{j = 1}^n f_\\vartheta(y_j | x_j)."
+  },
+  {
+    "objectID": "posts/max_likelihood.html#motivation",
+    "href": "posts/max_likelihood.html#motivation",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.1 Motivation",
+    "text": "1.1 Motivation\nSuppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure: \\{f_\\vartheta : \\R \\to [0, 1]\\}_{\\vartheta \\in \\Theta}.\nSince these measures are closed under translation, we can view the value of their density f_\\vartheta(x) at some point x \\in \\R as an immediate probability. If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle and requires a bit of imagination. If the density function is continuous, we can formally justify this intuition by noticing that f_\\vartheta(x) is the limit of the average probability around x: \\lim_{\\delta \\to 0} \\frac{1}{\\delta} \\int_{\\left[x - \\frac\\delta2, x + \\frac\\delta2\\right]} f_\\vartheta\\ \\text d\\mu."
+  },
+  {
+    "objectID": "posts/max_likelihood.html#general-definition",
+    "href": "posts/max_likelihood.html#general-definition",
+    "title": "An introduction to maximum likelihood estimation and applications to machine learning",
+    "section": "1.2 General definition",
+    "text": "1.2 General definition\nFrom this intuition, we can define the likelihood of a sequence of independent and identically-distributed observations \\mathbf{x} = \\{x_1, \\mathellipsis, x_n\\} as L(\\vartheta) = f_\\vartheta^n(\\mathbf{x}), where f_\\vartheta^n is the joint probability distribution over sequences of n independent f_\\vartheta-distributed examples. We then have: L(\\vartheta) = \\prod_{j = 1}^n f_\\vartheta(x_j).\nFrom a computational perspective, we often prefer to deal with the \\log-likelihood of a sequence of examples rather than their likelihood:\n\\log L(\\vartheta) = \\sum_{j = 1}^n \\log\\left(f_\\vartheta(x_j)\\right).\nWe then define the maximum-likelihood estimator of \\vartheta as:\n\\hat\\vartheta_{\\text{ml}} = \\argmax_{\\vartheta \\in \\Theta} L(\\vartheta),\nwhere the existence and uniqueness of the argmax is assumed.\nNote that since \\log is strictly increasing, \\argmax_\\vartheta L(\\vartheta) = \\argmax_\\vartheta (\\log(L(\\vartheta)))."
   }
 ]

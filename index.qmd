@@ -1,3 +1,18 @@
 ---
-title: Rayures
+title: "Rayures"
+description: "Maths and computer science."
+listing:
+  categories: true
+  contents: posts
+  sort: "date desc"
+  type: grid
+  image-align: left
+  feed: true
+  sort-ui: false
+  filter-ui: false
+  fields: [title, subtitle, date, categories]
+page-layout: full
+sidebar:
+    content: auto
+title-block-banner: true
 ---

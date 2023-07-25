@@ -1,0 +1,81 @@
+---
+title: An introduction to vector calculus
+categories:
+    - Maths
+    - Machine learning
+---
+
+This article introduces the theory of vector calculus. We'll define what it means for a function from a real vector space onto another to be differentiable, state several theorems that allow to calculate the differential of a differentiable function and see how differentials connect to partial derivatives in the case of finitely-generated vector spaces.
+
+# Differentiable functions
+
+Let $U$ and $V$ be vector spaces over the reals and let $f : U \to V$ be a function. Let $x_0 \in U$. $f$ is said to be _differentiable at $x_0$_ if there exists a continuous linear map $D_{x_0} : U \to V$ such that the function
+
+\begin{align*}
+U \setminus \{0\} &\to V\\
+\delta &\mapsto \frac{f(x_0 + \delta) - f(x_0) - D_{x_0}(\delta)}{\|\delta\|}
+\end{align*}
+
+tends to $0$ at $0$.
+
+If $f$ is a differential function at point $x_0$ then it can be shown that there exists a unique map $D_{x_0}$ that satisfies the above conditions. It is called the _differential_ of $f$ at point $x_0$.
+
+If $U$ is finitely generated then every linear map from $U$ onto another real vector space is continuous, so we don't need to prove it separately.
+
+The definition assumes the choice of a norm over each of the two spaces. Remember that if a vector space is finitely generated then all norms on this space define the same limits of functions, so you may choose whichever norm you fancy the most.
+
+This definition generalises the concept of differentiability and derivatives for real functions, in the sense that $f : \mathbb R \to \mathbb R$ has a derivative $f'(x_0)$ at point $x_0$ if and only if it is differentiable (as per the above definition) with differential $\delta \mapsto f'(x_0)\delta$.
+
+Here are a few examples of differentiable functions.
+
+- Every continuous linear map is differentiable everywhere, and its differential at any point is itself.
+- If $\phi$ is linear and continuous and $f$ is differentiable at $x_0$, then $\phi \circ f$ is differentiable at $x_0$ and its differential is $\phi \circ D_{x_0}f$
+- Let $f$ be the function that maps a square matrix $A \in \R^{n, n}$ to its square $A \times A \in \R^{n, n}$. We have :
+$$f(A + \delta) = (A + \delta)^2 = f(A) + A\delta + \delta A + \delta^2$$
+for all $\delta \in \R^{n, n}$ and any $A \in \R^{n, n}$. Therefore, $f(A + \delta) - f(A) = A\delta + \delta A + \delta^2$. $\frac{\delta^2}{\|\delta\|} \xrightarrow[\delta \to 0, \delta \neq 0]{} 0$ since there exists a sub-multiplicative norm on $\R^{n, n}$. Therefore, $f$ is differentiable and its differential at point $A$ is $\delta \mapsto A\delta + \delta A$.
+- Let $u : \R \to \R$ be a differentiable function and let $f : \R^{n, p} \to \R^{n, p}$ be the map that applies the function $u$ to every cell of its input, i.e. $f((a_{i, j})_{1 \le i \le n, 1 \le j \le p}) = (u(a_{i, j}))_{1 \le i \le n, 1 \le j \le p}$. Then $f$ is differentiable at every point $A \in \R^{n, p}$, and its differential is $\delta \mapsto u'(A) \odot \delta$, where $u'(A)$ is the matrix constructed by applying $u'$ to every entry of $A$ and $\odot$ denotes the Hadamard product, i.e. cell-wise multiplication. This can be generalised by replacing $u$ by an $n \times p$ matrix of functions and defining $f$ by applying the function $u_{i, j}$ to the entry $A_{i, j}$ of the input matrix.
+
+If two functions $f$ and $g$ defined on the same vector space are differentiable at $x_0$ then their linear combinations $\{f + \lambda g\}$ are differentiable at $x_0$ as well. The differential of $f + \lambda g$ at $x_0$ is then $D_{x_0}f + \lambda D_{x_0}g$.
+
+If $f : U \to V$ is differentiable at point $x_0 \in U$ and $g : V \to W$ is differentiable at point $f(x_0) \in V$ then $g \circ f$ is differentiable at point $x_0$ and its differential is $\left(D_{f(x_0)}g\right) \circ \left(D_{x_0}f\right)$.
+
+# Partial derivatives
+
+Another approach to differentials involves applying the one-dimensional definition of differentiability and derivatives to partial functions $x_i \mapsto f(x_1, \mathellipsis, x_i, \mathellipsis, x_n)$. This motivates the definition of partial derivatives. We'll see in this section how they are connected to the differentials we saw previously.
+
+## Definition
+
+Let $U$ and $V$ be real vector spaces, with $U$ being finitely generated with dimension $n \ge 1$. Given a fixed canonical basis $(e_1, \mathellipsis, e_n)$ of $U$, we say that a function $f : U \to V$ admits an $i-$th _partial derivative_ at point $x$ if the function
+
+\begin{align*}
+\lambda \mapsto \frac{f(x + \lambda e_i) - f(x)}{\lambda}
+\end{align*}
+
+had a limit at $0$.
+
+The $i-$th partial derivative at $x_0$ is then the limit of the above function. $\partial_i f$ denotes the function that maps $x \in U$ to the $i-$ th partial derivative of $f$ at $x$.
+
+## Partial derivatives and differentials
+
+It can be shown that if a function is differentiable at point $x_0$ then it admits an $i-$th partial derivative at $x_0$, for every $i$. The converse is not true, however it is sufficient to admit _continuous_ partial derivatives along every component at some point $x_0$ to be differentiable at $x_0$. Moreover, the $i-$th partial derivative of $f$ at $x_0$ is given by $D_{x_0}f(e_i)$. This means that if $V$ is finitely generated as well then the matrix of $D_{x_0}f$ is $(\partial_j f_i(x_0))_{1 \le i \le \dim(V), 1 \le j \le n}$. This matrix is known as the _Jacobian matrix_ (of $f$, at point $x_0$), that we'll denote $[D_{x_0}f]$ (or $[D_{x_0}f]_{(e_i)}$ is the choice of the canonical basis is not trivial), or $J_{x_0}(f)$.
+
+This result is useful because it allows to effectively store the differential of a function as a matrix.
+
+It then follows from the calculation rules we saw earlier that the Jacobian matrix of a linear combination of two functions is the linear combination of their Jacobians, and that the Jacobian of the composition $g \circ f$ at point $x_0$ is:
+$$[D_{x_0}(g\circ f)] = [D_{f(x_0)}g] [D_{x_0}f],$$
+where juxtaposition denotes matrix multiplication.
+
+# Applications to gradient-based learning
+
+_Gradient-based learning_ refers to an approach to machine learning and optimisation where we use the _gradient_ of a cost function we seek to minimise to adjust its parameters so as to approximate a local minimum. For example, a simple regression problem can be approximated by minimising the following expression with respect to $W$ and to $B$:
+$$\frac{1}{N} \sum_{k = 1}^N \|\sigma(WX + B) - y^*\|_2^2$$
+where $N$ is the number of training examples, $y^*$ is a matrix containing the expected values and $\sigma(WX + B)$ is a matrix containing the predictions, resulting from the application of a function $\sigma : \R \to [a, b]$ to an affine transformation of the input $X$. It can be shown that this expression equals:
+$$\text{Tr}((\hat y - y^*)^T(\hat y - y^*))$$
+where $\hat y = \sigma(WX + B)$.
+It is then easy to calculate the differential of $J$ as a function of $W$, and as a function of $B$. We can then calculate its Jacobian with respect to each of the two parameters, and update the parameters by performing:
+$$(W, B) \leftarrow (W, B) - \gamma (J_W, J_B),$$
+where $J_W$ and $J_B$ are the Jacobians of the expression above viewed as a function of $W$ and $B$ respectively, and $\gamma$ is known as the _learning rate_ and controls the learning speed and accuracy.
+
+# Conclusion
+
+The theory of differentials extends the theory of derivatives to functions between arbitrary real vector spaces. Instead of viewing a derivative as the pointwise speed of a function around some point, we introduce _differentials_ as straight lines that approximate a function around some point, and that stay _arbitrarily closer to the function than the identity_. Derivatives are therefore not numbers anymore, they are now defined as linear maps. In finitely-generated spaces, we can however describe differentials using a single, constant object: a matrix. This representation is particularly convenient from a computational perspective and allows to update parameters when solving optimisation problems using a _gradient-based_ approach.
