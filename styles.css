@@ -199,7 +199,11 @@ section h2 {
 }
 
 section h3 {
-    font-size: 110px;
+    font-size: 115%;
+}
+
+section h4 {
+    font-size: 110%;
 }
 
 .title {
@@ -217,10 +221,6 @@ section h3 {
 .subtitle {
     font-size: 100%;
     text-align: center;
-}
-
-section h4 {
-    font-size: 12px;
 }
 
 .title {

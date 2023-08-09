@@ -4621,7 +4621,10 @@ section h2 {
 font-size: 120%;
 }
 section h3 {
-font-size: 110px;
+font-size: 115%;
+}
+section h4 {
+font-size: 110%;
 }
 .title {
 color: #F3EFE0;
@@ -4635,9 +4638,6 @@ font-size: 100%;
 .subtitle {
 font-size: 100%;
 text-align: center;
-}
-section h4 {
-font-size: 12px;
 }
 .title {
 font-size: 22pt;
@@ -4707,7 +4707,7 @@ font-size: small;
 <h1 data-number="1"><span class="header-section-number">1</span> Theoretical foundations</h1>
 <section id="motivation" class="level2" data-number="1.1">
 <h2 data-number="1.1" class="anchored" data-anchor-id="motivation"><span class="header-section-number">1.1</span> Motivation</h2>
-<p>Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure: <span class="math display">\{f_\vartheta : \R \to [0, 1]\}_{\vartheta \in \Theta}.</span></p>
+<p>Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure: <span class="math display">\{f_\vartheta : \R \to \R_+\}_{\vartheta \in \Theta}.</span></p>
 <p>Since these measures are closed under translation, we can view the value of their density <span class="math inline">f_\vartheta(x)</span> at some point <span class="math inline">x \in \R</span> as an <em>immediate probability</em>. If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle and requires a bit of imagination. If the density function is continuous, we can formally justify this intuition by noticing that <span class="math inline">f_\vartheta(x)</span> is the limit of the average probability around <span class="math inline">x</span>: <span class="math inline">\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu</span>.</p>
 </section>
 <section id="general-definition" class="level2" data-number="1.2">
@@ -4736,7 +4736,7 @@ font-size: small;
 </section>
 <section id="application-to-binary-classification" class="level1" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> Application to binary classification</h1>
-<p>Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset <span class="math inline">\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}</span>, we can say that for a given <span class="math inline">x \in \R^n</span>, associated values <span class="math inline">y</span> are taken by a <span class="math inline">\text{Bern}(\vartheta(x))</span>-distributed random variable <span class="math inline">Y_x</span>. The goal is then to find a function <span class="math inline">\hat{y} : \R^n \to [0, 1]</span> that maps an input vector <span class="math inline">x \in \R^d</span> to a parameter <span class="math inline">\vartheta</span> such that it is likely that <span class="math inline">Y_x \sim \text{Bern}(\vartheta(x))</span>.</p>
+<p>Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset <span class="math inline">\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}</span>, we can say that for a given <span class="math inline">x \in \R^n</span>, associated values <span class="math inline">y</span> are taken by a <span class="math inline">\text{Bern}(\vartheta(x))</span>-distributed random variable <span class="math inline">Y_x</span>. The goal is then to find a function <span class="math inline">\hat{y} : \R^n \to \R_+</span> that maps an input vector <span class="math inline">x \in \R^d</span> to a parameter <span class="math inline">\vartheta</span> such that it is likely that <span class="math inline">Y_x \sim \text{Bern}(\vartheta(x))</span>.</p>
 <p>Suppose you want <span class="math inline">\hat{y}(x) = \sigma(Wx + B)</span> for some real-valued affine map with coefficients <span class="math inline">W, B</span> fixed before <span class="math inline">x</span>, where <span class="math inline">\sigma : z \mapsto \frac{\exp(z)}{1 + \exp(z)}</span> is the <em>sigmoid function</em>. In other words, you want to find <span class="math inline">W</span> and <span class="math inline">B</span> that maximise the likelihood <span class="math inline">\prod_{j = 1}^n \sigma(Wx_j+B) y_j + (1 - \sigma(Wx_j + B))(1-y_j)</span>. Since <span class="math inline">Y_x</span> can only take values <span class="math inline">0</span> and <span class="math inline">1</span>, the log of the probability is <span class="math inline">\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j)</span>. The <span class="math inline">\log</span>-likelihood is therefore: <span class="math display">\sum_{j = 1}^n \left(\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right),</span> and the cost function we want to minimise is associated with the cross-entropy loss function: <span class="math display">\sum_{j = 1}^n \left(-\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right).</span></p>
 
 
