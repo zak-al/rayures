@@ -12,7 +12,7 @@ The _maximum likelihood_ paradigm describes a rule to find a distribution that b
 ## Motivation
 
 Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure:
-$$\{f_\vartheta : \R \to [0, 1]\}_{\vartheta \in \Theta}.$$
+$$\{f_\vartheta : \R \to \R_+\}_{\vartheta \in \Theta}.$$
 
 Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_. If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle and requires a bit of imagination. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$.
 
@@ -63,7 +63,7 @@ which provides a statistical, rather than topological, argument to justify the c
 
 # Application to binary classification
 
-Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}$, we can say that for a given $x \in \R^n$, associated values $y$ are taken by a $\text{Bern}(\vartheta(x))$-distributed random variable $Y_x$. The goal is then to find a function $\hat{y} : \R^n \to [0, 1]$ that maps an input vector $x \in \R^d$ to a parameter $\vartheta$ such that it is likely that $Y_x \sim \text{Bern}(\vartheta(x))$.
+Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}$, we can say that for a given $x \in \R^n$, associated values $y$ are taken by a $\text{Bern}(\vartheta(x))$-distributed random variable $Y_x$. The goal is then to find a function $\hat{y} : \R^n \to \R_+$ that maps an input vector $x \in \R^d$ to a parameter $\vartheta$ such that it is likely that $Y_x \sim \text{Bern}(\vartheta(x))$.
 
 Suppose you want $\hat{y}(x) = \sigma(Wx + B)$ for some real-valued affine map with coefficients $W, B$ fixed before $x$, where $\sigma : z \mapsto \frac{\exp(z)}{1 + \exp(z)}$ is the _sigmoid function_. In other words, you want to find $W$ and $B$ that maximise the likelihood $\prod_{j = 1}^n \sigma(Wx_j+B) y_j + (1 - \sigma(Wx_j + B))(1-y_j)$. Since $Y_x$ can only take values $0$ and $1$, the log of the probability is $\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j)$. The $\log$-likelihood is therefore:
 $$\sum_{j = 1}^n \left(\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right),$$
