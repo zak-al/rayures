@@ -1,0 +1,19 @@
+---
+title: Build a convolutional neural network from scratch
+categories:
+    - Machine learning
+---
+
+# Introduction
+
+This article introduces convolutional networks and shows how to implement one from scratch in Python.
+Here are the topics we'll cover:
+
+- Definition of cross-correlation.
+- Typical convolutional layers.
+- Pooling.
+- Derivation of the differential of convolutional layers for gradient descent.
+- AlexNet.
+
+# Cross-correlation
+
