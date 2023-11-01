@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.433">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Rayures - An introduction to decision trees, and how to implement them</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var head = document.getElementsByTagName("head")[0];
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css";
+      head.appendChild(link);
+
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js";
+      script.async = false;
+      script.addEventListener('load', function() {
+        var mathElements = document.getElementsByClassName("math");
+          var macros = [];
+          for (var i = 0; i < mathElements.length; i++) {
+            var texText = mathElements[i].firstChild;
+            if (mathElements[i].tagName == "SPAN") {
+              window.katex.render(texText.data, mathElements[i], {
+                displayMode: mathElements[i].classList.contains('display'),
+                throwOnError: false,
+                macros: macros,
+                fleqn: false
+              });
+            }
+          }
+      });
+      head.appendChild(script);
+    });
+  </script>
+  
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body>
+
+<div id="quarto-search-results"></div>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">An introduction to decision trees, and how to implement them</h1>
+                                <div class="quarto-categories">
+                <div class="quarto-category">Machine learning</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title"><strong>Sections</strong></h2>
+   
+  <ul class="collapse">
+  <li><a href="#introduction-and-inference" id="toc-introduction-and-inference" class="nav-link active" data-scroll-target="#introduction-and-inference"><span class="header-section-number">1</span> Introduction and inference</a></li>
+  <li><a href="#training-a-decision-tree" id="toc-training-a-decision-tree" class="nav-link" data-scroll-target="#training-a-decision-tree"><span class="header-section-number">2</span> Training a decision tree</a>
+  <ul class="collapse">
+  <li><a href="#what-needs-to-be-trained" id="toc-what-needs-to-be-trained" class="nav-link" data-scroll-target="#what-needs-to-be-trained"><span class="header-section-number">2.1</span> What needs to be trained</a></li>
+  <li><a href="#a-brief-introduction-to-information-theory" id="toc-a-brief-introduction-to-information-theory" class="nav-link" data-scroll-target="#a-brief-introduction-to-information-theory"><span class="header-section-number">2.2</span> A brief introduction to information theory</a></li>
+  <li><a href="#training-for-classification" id="toc-training-for-classification" class="nav-link" data-scroll-target="#training-for-classification"><span class="header-section-number">2.3</span> Training for classification</a></li>
+  <li><a href="#training-for-regression" id="toc-training-for-regression" class="nav-link" data-scroll-target="#training-for-regression"><span class="header-section-number">2.4</span> Training for regression</a></li>
+  </ul></li>
+  <li><a href="#ensemble-methods" id="toc-ensemble-methods" class="nav-link" data-scroll-target="#ensemble-methods"><span class="header-section-number">3</span> Ensemble methods</a></li>
+  <li><a href="#xgboost" id="toc-xgboost" class="nav-link" data-scroll-target="#xgboost"><span class="header-section-number">4</span> XGBoost</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<p>This articles introduces decision trees and describes the algorithms used to make predictions and for training. We’ll formally motivate the training algorithms using information theory and implement a set of utils for prediction and inference in Python.</p>
+<section id="introduction-and-inference" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction and inference</h1>
+<p>A decision tree is a machine learning model used for both classification and regression tasks.</p>
+<p>Decision trees are represented as trees where every leaf is the prediction and every internal node corresponds to a feature and sends the input to one subtree depending on its value. If a feature can take one of finitely many values that do not follow any natural order, each child of the node corresponds to one of the possible values. If a feature takes values in a interval (discrete or continuous), the node has two children corresponding to a partition of the interval into two sub-intervals.</p>
+<p>When trying to predict the class of an input <span class="math inline">X</span> given its features <span class="math inline">f_1(X), \mathellipsis, f_p(X)</span>, we start from the root (representing some feature f_i), go down the branch that corresponds to <span class="math inline">f_i(X)</span> and repeat on the associated subtree until we reach a leaf. When performing a classification task, the leaves correspond to classes. In a regression task, the leaves are <span class="math inline">(\mu, \sigma^2)</span> pairs corresponding to the parameter of the normal distribution that describes the value that can be taken by the output (some may argue that this sounds more like classification than regression…).</p>
+<p>We’ll represent decision trees</p>
+</section>
+<section id="training-a-decision-tree" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Training a decision tree</h1>
+<section id="what-needs-to-be-trained" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="what-needs-to-be-trained"><span class="header-section-number">2.1</span> What needs to be trained</h2>
+<p>Training a decision tree means finding the order in which the features of the input will be evaluated, and finding an optimal threshold when making a decision based on the value of a continuous feature.</p>
+<p>Before delving into the theory, let’s start with a simple example that shows how the choice of the feature for every node affects the accuracy of the model. Consider a dataset consisting of twenty examples, each having class <span class="math inline">0</span> or <span class="math inline">1</span>, and represented by three binary features, <span class="math inline">a</span>, <span class="math inline">b</span> and <span class="math inline">c</span>, each taking value <span class="math inline">0</span> or <span class="math inline">1</span>. This is an example of tree that matches the structure of the dataset:</p>
+</section>
+<section id="a-brief-introduction-to-information-theory" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="a-brief-introduction-to-information-theory"><span class="header-section-number">2.2</span> A brief introduction to information theory</h2>
+<section id="information" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="information"><span class="header-section-number">2.2.1</span> Information</h3>
+<p>When training a decision tree on a dataset <span class="math inline">D = \{d_1, \mathellipsis, d_N\}</span>, we want to choose a feature <span class="math inline">f : D \to \mathcal C_f</span> (where <span class="math inline">\mathcal C_f</span> is a finite set) that holds as much information as possible on the class of the data points.</p>
+<p>An <em>information function</em> is a continuous function <span class="math inline">I : (0, 1] \to [0, +\infty)</span> that satisfies the following conditions:</p>
+<ul>
+<li>for all <span class="math inline">x, y</span>, <span class="math inline">I(xy) = I(x) + I(y)</span>: if two events are independent, the information that their intersection provides is the sum of the information that each provides;</li>
+<li><span class="math inline">I</span> is strictly decreasing: if an event is less likely to happen than an another, knowing whether it happened brings more information.</li>
+</ul>
+<p>We can prove that information functions are exactly the functions <span class="math inline">\log_b</span>, where <span class="math inline">b \in (0, 1)</span>. Equivelently, they are the functions <span class="math inline">-\log_b</span> where <span class="math inline">b &gt; 1</span>. Here is an outline of a proof, given some information function <span class="math inline">I</span>:</p>
+<ul>
+<li><span class="math inline">I</span> is a bijection from <span class="math inline">(0, 1]</span> onto <span class="math inline">[0, +\infty)</span>: injectivity comes from the fact that is is strictly monotonic and unboundedness comes from the fact that <span class="math inline">I(1/2^n) = nI(1/2)</span>.</li>
+<li><span class="math inline">I</span> has an inverse <span class="math inline">E : [0, +\infty) \to (0, 1]</span> that satisfies <span class="math inline">E(x + y) = E(x)E(y)</span> for all <span class="math inline">x, y</span>.</li>
+<li><span class="math inline">E</span> is continous and agrees with the function <span class="math inline">r \mapsto E(1)^r</span> on <span class="math inline">[0, \infty) \cap \mathbb{Q}</span>, therefore it is the exponential function with base <span class="math inline">E(1) \in (0, 1)</span>.</li>
+<li><span class="math inline">I</span> is therefore the inverse of <span class="math inline">\exp_{E(1)}</span>, so <span class="math inline">I = \log_{E(1)}</span>.</li>
+</ul>
+<p>We then extend <span class="math inline">I</span> to <span class="math inline">[0, 1]</span> by defining <span class="math inline">I(0) = \lim_{0} I = +\infty</span> (which preserves the two axioms).</p>
+</section>
+<section id="entropy" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="entropy"><span class="header-section-number">2.2.2</span> Entropy</h3>
+<p>Let <span class="math inline">\mathbb P</span> be a probability measure with a finite sample space <span class="math inline">X</span> and let <span class="math inline">p</span> be its mass function. We define the <em>entropy</em> of <span class="math inline">\mathbb P</span>, denoted <span class="math inline">H(\mathbb P)</span>, as the expected value of <span class="math inline">I \circ p</span> with respect to <span class="math inline">\mathbb P</span>: <span class="math display">H(\mathbb P) = \sum_{x \in X} I(p(x)) p(x).</span></p>
+<p>For convenience, we may use <span class="math inline">H(Y)</span> to denote the entropy of the distribution of a random variable <span class="math inline">Y</span>.</p>
+<p>(<span class="math inline">H</span> is a capital <span class="math inline">\eta</span>, and should be pronounced <em>eta</em> and not <em>eitsch</em>…)</p>
+<p>For simplicity, we pretend that there is a unique information function as the choice of the base does not matter for our purposes. In practice, it is convenient to chose base <span class="math inline">\frac{1}{|X|}</span> (i.e.&nbsp;<span class="math inline">I = -\log_{|X|}</span>) so that <span class="math inline">H</span> takes values between <span class="math inline">0</span> and <span class="math inline">1</span> (more on that just below).</p>
+<p>The entropy of a probability measure helps us quantify the amount of information carried by the knowledge of the outcome of a random experiment. A high entropy means that knowing the actual outcome gives a lot of information. In other words, it means that knowing the distribution wasn’t sufficient to predict what the outcome was going to be. For example, we can use Jensen’s inequality to show that the uniform distribution maximises the entropy over all distributions over any fixed finite sample space <span class="math inline">X</span>. On the contrary, the entropy of a distribution that takes value <span class="math inline">1</span> for one outcome and <span class="math inline">0</span> for every other is <span class="math inline">0</span>.</p>
+<p>An important example to remember is the one of a Bernoulli distibution, shown below. <img src="../images/decision_trees/entropy_bernoulli.png" title="Entropy of a Bernoulli distribution as a function of the parameter $p$. Shows an even function, reaching a minimum of $0$ at $0$ and $1$ and a maximum at $1/2$." class="img-fluid" alt="Entropy of a Bernoulli distribution as a function of the parameter p."></p>
+<p>The graph shows the entropy of a Bernoulli distribution as a function of its parameter <span class="math inline">p \in [0, 1]</span>. If <span class="math inline">p</span> is close to <span class="math inline">0</span> or <span class="math inline">1</span> then the entropy is low, as almost all the information is carried by the theoretical distribution rather than the knowledge of the actual outcome. If <span class="math inline">p</span> is close to <span class="math inline">1/2</span>, it is difficult to predict what the outcome will be by just looking at the distribution and most of the information is carried by the knowledge of the outcome of the experiment.</p>
+</section>
+<section id="conditional-entropy-and-information-gain" class="level3" data-number="2.2.3">
+<h3 data-number="2.2.3" class="anchored" data-anchor-id="conditional-entropy-and-information-gain"><span class="header-section-number">2.2.3</span> Conditional entropy and information gain</h3>
+<p>Let <span class="math inline">X</span> be a random variable onto a finite domain (which we’ll assume without loss of generality to be <span class="math inline">\{1, \mathellipsis, n\}</span> for some positive integer <span class="math inline">n</span>) and let <span class="math inline">A \sube \N</span> be an event. We define the <em>conditional entropy</em> of <span class="math inline">X</span> given <span class="math inline">A</span> as the entropy of the conditional distribution of the value of <span class="math inline">X</span> given <span class="math inline">A</span>, i.e.: <span class="math display">H(X | A) = \sum_{k = 1}^n \mathbb P(X = k | A) I(\mathbb P(X = k | A)).</span></p>
+<p>A high conditional entropy means that despite knowing that <span class="math inline">A</span> occurred, we couldn’t predict what value <span class="math inline">X</span> was going to take. A low conditional entropy means that the assumption that <span class="math inline">A</span> occurred was enough to make the distribution of <span class="math inline">X</span> “almost deterministic”.</p>
+<p>We can then define the conditional entropy of <span class="math inline">X</span> given another random variables <span class="math inline">Y</span> taking values in another finite set, let’s say <span class="math inline">\{1, \mathellipsis, p\}</span> as: <span class="math display">H(X | Y) = \mathbb E_{y \sim \mathbb P_Y}[H(X | Y = y)] = \sum_{y = 1}^p \mathbb P(Y = y) H(X | Y = y).</span></p>
+<p>If <span class="math inline">H(X | Y)</span> is high, knowing whatever value was taken by <span class="math inline">Y</span> won’t help us determine the value that <span class="math inline">X</span> will take. If <span class="math inline">H(X | Y)</span> is low, it is enough to know the value taken by <span class="math inline">Y</span> to be able to predict what value <span class="math inline">X</span> will take with reasonable confidence.</p>
+<p>If <span class="math inline">A \in \R^{1, p}</span> is the row matrix whose <span class="math inline">y</span>-th entry is <span class="math inline">\mathbb P(Y = y)</span> and <span class="math inline">B \in \R^{p, n}</span> is the matrix whose <span class="math inline">(y, x)</span>-th entry is <span class="math inline">\mathbb P(X = x | Y = y)</span> then the formula for the conditional entropy of <span class="math inline">X</span> given <span class="math inline">Y</span> is: <span class="math display">H(X | Y) = \sum_{x = 1}^n (A \times (M \odot I(M)))_x,</span> where <span class="math inline">\odot</span> denotes the Hadamard product, i.e.&nbsp;cell-wise multiplication. This expression can be used to easily calculate an entropy using a linear algebra library.</p>
+<p>Finally, we use the <em>information gain of <span class="math inline">X</span> relative to <span class="math inline">Y</span></em> <span class="math inline">\text{IG}(X, Y) = H(X) - H(X | Y)</span> to quantify the information brought by the knowledge of the value taken by <span class="math inline">Y</span> to predict the value that <span class="math inline">X</span> will take.</p>
+</section>
+</section>
+<section id="training-for-classification" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="training-for-classification"><span class="header-section-number">2.3</span> Training for classification</h2>
+<p>The algorithm we’ll use to train decision trees is based on the following principle: at every node, we split the dataset according to a feature <span class="math inline">f</span> such that the information gain of the class relative to <span class="math inline">f</span> is maximised over all features.</p>
+<p>Formally, consider a dataset <span class="math inline">D</span> containing <span class="math inline">N</span> points. Every point <span class="math inline">X</span> has <span class="math inline">p</span> features <span class="math inline">f_1(X), \mathellipsis, f_p(X)</span> and a class <span class="math inline">C(X)</span>. The goal is to construct a tree such that:</p>
+</section>
+<section id="training-for-regression" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="training-for-regression"><span class="header-section-number">2.4</span> Training for regression</h2>
+</section>
+</section>
+<section id="ensemble-methods" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Ensemble methods</h1>
+</section>
+<section id="xgboost" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> XGBoost</h1>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+          // target, if specified
+          link.setAttribute("target", "_blank");
+      }
+    }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
