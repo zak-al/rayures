@@ -12,9 +12,10 @@ The _maximum likelihood_ paradigm describes a rule to find a distribution that b
 ## Motivation
 
 Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure:
-$$\{f_\vartheta : \R \to \R_+\}_{\vartheta \in \Theta}.$$
+$$\{f_\vartheta : X \to \R_+\}_{\vartheta \in \Theta}.$$
 
-Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_ (note that this name can be misleading as it is _not_ a probability in the case of Lebesgue-continuous distributions). If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle and requires a bit of imagination. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$.
+Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_ (note that this name can be misleading as it is _not_ a probability in the case of Lebesgue-continuous distributions). If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$, which is the fundamental theorem of analysis.
+This result can be generalised using the Lebesgue differentiation theorem ([Wikipedia](https://en.wikipedia.org/wiki/Lebesgue_differentiation_theorem))
 
 ## General definition
 
@@ -35,37 +36,59 @@ Note that since $\log$ is strictly increasing, $\argmax_\vartheta L(\vartheta) =
 
 ## Approximating distribution of input/output pairs with conditional maximumum likelihood
 
-Similarly, we can use the maximum likelihood paradigm to find a distribution that best describes a set of observations of the form $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\}$, where $y_j$ is viewed as an output associated with input $x_j$. For every $x_j$, we consider the density functions $f_\vartheta(\cdot | x_j)$ across all $\vartheta \in \Theta$. We then define the likelihood of the set of observations for parameter $\vartheta$ as the density function of the random vector sequence $(Y_1, \mathellipsis, Y_n)$, where $Y_j \sim f_\theta(\cdot | x_j)$, evaluated at $(y_1, \mathellipsis, y_n)$ i.e.
+Similarly, we can use the maximum likelihood paradigm to find a distribution that best describes a set of observations of the form $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\}$, where $y_j$ is viewed as an output associated with input $x_j.$ For every $x_j$, we consider the density functions $f_\vartheta(\cdot | x_j)$ across all $\vartheta \in \Theta$. We then define the likelihood of the set of observations for parameter $\vartheta$ as the density function of the random vector sequence $(Y_1, \mathellipsis, Y_n)$, where $Y_j \sim f_\theta(\cdot | x_j)$, evaluated at $(y_1, \mathellipsis, y_n)$ i.e.
 $$L(\vartheta) = \prod_{j = 1}^n f_\vartheta(y_j | x_j).$$
 
-# Application to linear regression
+# Application: constructing loss functions
 
-A linear regression model is a model that seeks to approximate by a linear or affine function a real number $y$ based on an observation $x$.
-We assume that for a fixed parameter $x$, we made a set of observations $\{y_i\}_{i = 1}^k$ normally distributed around some mean $\mu(x)$ for some variance $\sigma^2$ fixed before $x$ (for simplicity, we'll assume that $\sigma^2 = 1$).
+We can apply this theory to machine learning by constructing loss functions that decrease as the likelihood of the parameters increases.
+To do this, we'll view machine learning models as approximating distributions rather than making single predictions.
+In other words, instead of a model predicting one output $y$ given some input $x$, it will find parameters that define a distribution over the set of possible outputs such that the prediction is the output where the density is the highest.
 
-If $(Y_1, \mathellipsis, Y_n)$ is a random vector whose components are independent and normally distributed with non-zero variance then it is distributed according to a _multivariate normal distribution_ characterised by its vector of expected values $\mathbf M \in \R^n$ and _invertible_ covariance matrix $C$ (where the invertibility comes from the fact that variances are all non-zero). Since the covariance matrix is invertible, it can be shown that the distribution of the vector admits a density with respect to the Lebesgue measure on $\R^n$, expressed as:
-$$f_{\mathbf M}(\mathbf{z}) = \alpha \exp\left(-\frac12 \langle \mathbf{z} - \mathbf M, C^{-1}(\mathbf z - \mathbf M) \rangle\right),$$
-where $\langle \cdot, \cdot\rangle$ is the dot product on $\R^n$ and $\alpha$ is a positive constant that depends on $n$ and the parameters of the distribution. Since we assumed the variance of all our little univariate normal distributions to be $1$, $C$ is actually $\text{Id}_n$, so we can rewrite the above expression as follows:
-$$f(\mathbf{z}) = \alpha \exp\left(-\frac12 \|\mathbf{z} - \mathbf{M}\|^2\right),$$
-where $\|\cdot\|$ is the Euclidean norm, i.e. the norm associated with the dot product.
+## Application to regression models
 
-The covariance matrix being fixed, we can use the maximum likelihood paradigm to estimate the parameter $\mathbf{M} = (y_1, \mathellipsis, y_n)$ of the multivariate normal distribution. We want to approximate $\mathbf{M}$ by an affine function, so the parameter of the model is a pair $(W, B)$ defining a mean $W\mathbf{x} + B \in \R^n$. The likelihood is therefore:
-$$L(W, B) = \alpha \exp\left(-\frac12 \|W\mathbf{x} + B - \mathbf{M}\|^2\right),$$
-where $\|\cdot\|$ is the Euclidean norm.
+Regression models seek to predict a real number $y$ based on an observation $x$.
+To translate this definition into our probabilistic framework, we'll assume that given an observation $x$, possible predictions are uniformly distributed around some mean $\mu$ with some standard deviation $\sigma^2$.
+For simplicity, we'll assume that the standard deviation is fixed across all inputs, and that it equals $1$. Our goal is therefore to approximate $\mu$.
+The most probable outcome when making a normally-distributed draw over $\R$ being the mean of the distribution, $\mu$ corresponds to what the model would predict in a single-prediction framework.
+
+Suppose you have a dataset $D = \{(x^{(i)}, y^{(i)}) : 1 \le i \le N\}$ where $x^{(i)} \in U$ are inputs, lying in some space $U$, and $y^{(i)} \in \R$ are predicted values.
+We describe our model by a function $f_W : U \to \R$ that depends on a parameter $W$.
+The likelihood of the dataset given some parameter $W$ is:
+
+$$L(\theta) = \prod_{i = 1}^N \alpha \exp\left(-\frac12(y^{(i)}-f_{W}(x^{(i)}))^2\right),$$
+
+where $\alpha$ is a positive constant.
 
 The $\log$-likelihood is then:
-$$-\frac12 \|W\mathbf{x} + B - M\|^2 + \text{ stuff}.$$
+$$-\frac12 \sum_{i = 1}^N (f_W(x^{(i)}) - y^{(i)})^2 + \text{ stuff}.$$
 
 In machine learning, we often consider _cost functions_ that we seek to minimise, so we actually want to minimise:
-$$\frac{1}2 \|W\mathbf{x} + B - M\|^2,$$
+$$\sum_{i = 1}^N (f_W(x^{(i)}) - y^{(i)})^2.$$
 
-which provides a statistical, rather than topological, argument to justify the choice of the Euclidean norm in what is then known as _least-squares regression_.
+Grouping terms together, we show that if the output contains multiple units (in other words, if we want to find a normally-distributed vector), the cost function becomes:
+$$\sum_{i = 1}^N \|f_W(x^{(i)}) - y^{(i)}\|^2,$$
+where $\|\cdot\|$ is the $L^2$ norm.
 
-# Application to binary classification
+## Application to classification
 
-Binary classification can be modelled by Bernoulli distributions. More precisely, if we have a dataset $\{(x_1, y_1), \mathellipsis, (x_n, y_n)\} \sube \R^d \times \{0, 1\}$, we can say that for a given $x \in \R^n$, associated values $y$ are taken by a $\text{Bern}(\vartheta(x))$-distributed random variable $Y_x$. The goal is then to find a function $\hat{y} : \R^n \to \R_+$ that maps an input vector $x \in \R^d$ to a parameter $\vartheta$ such that it is likely that $Y_x \sim \text{Bern}(\vartheta(x))$.
+We now suppose that our dataset $D$ contains points $(x^{(i)}, y^{(i)}) \in U \times \{0, 1\}$ for $1 \le i \le N$, where $U$ is an arbitrary input space.
+The model is described by a function $f_W: U \to (0, 1)$ that assigns an input to the probability of the associated output being $1$, thus defining a Bernoulli distribution.
+The logarithm of the probability of $k \in \{0, 1\}$ for parameter $W$ given input $x^{(i)}$ is therefore $k \log\left(f_W(x^{(i)})\right) + (1-k)\log\left(1 - f_W(x^{(i)})\right)$.
+The $\log$-likelihood is:
+$$\sum_{i = 1}^N y^{(i)} \log(f_W(x^{(i)})) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
 
-Suppose you want $\hat{y}(x) = \sigma(Wx + B)$ for some real-valued affine map with coefficients $W, B$ fixed before $x$, where $\sigma : z \mapsto \frac{\exp(z)}{1 + \exp(z)}$ is the _sigmoid function_. In other words, you want to find $W$ and $B$ that maximise the likelihood $\prod_{j = 1}^n \sigma(Wx_j+B) y_j + (1 - \sigma(Wx_j + B))(1-y_j)$. Since $Y_x$ can only take values $0$ and $1$, the log of the probability is $\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j)$. The $\log$-likelihood is therefore:
-$$\sum_{j = 1}^n \left(\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right),$$
-and the cost function we want to minimise is associated with the cross-entropy loss function:
-$$\sum_{j = 1}^n \left(-\log(\sigma(Wx_j + B))y_j + \log(1 - \sigma(Wx_j + B))(1 - y_j) \right).$$
+and the cost function we want to minimise is:
+$$\sum_{i = 1}^N y^{(i)} \log\left(f_W(x^{(i)})\right) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
+
+We can generalise this formula to any classification problem.
+Consider a set of $k$ classes (without loss of generality, we'll assume classes are $\{1, \mathellipsis, k\}$).
+Instead of computing a single real number, $f_W$ will now compute a vector of $k$ positive numbers adding up to $1$.
+For all $i \in \{1, \mathellipsis, k\}$, the $i$-th component of the output of $f_W$ is an estimation of the probability of class $i$.
+This naturally defines a probability distribution over the set of all classes.
+
+Given an input $x^{(i)}$, the $\log$-likelihood of output $y^{(i)}$ for parameter $W$ is then:
+$$\log f_W(x^{(i)})_y^{(i)},$$
+
+and the cost of the dataset is:
+$$-\sum_{i = 1}^N \log f_W(x^{(i)})_y^{(i)}.$$
