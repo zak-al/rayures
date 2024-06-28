@@ -14,7 +14,8 @@ The _maximum likelihood_ paradigm describes a rule to find a distribution that b
 Suppose you have a parametrised set of probability distributions, characterised by density functions with respect to the counting or Lebesgue measure:
 $$\{f_\vartheta : X \to \R_+\}_{\vartheta \in \Theta}.$$
 
-Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_ (note that this name can be misleading as it is _not_ a probability in the case of Lebesgue-continuous distributions). If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$, which is the fundamental theorem of analysis.
+Since these measures are closed under translation, we can view the value of their density $f_\vartheta(x)$ at some point $x \in \R$ as an _immediate probability_ (note that this name can be misleading as it is _not_ a probability in the case of Lebesgue-continuous distributions).
+If we work with the counting measure, this is clear since the value of the density at some point is the actual probability of the point. When working with the Lebesgue measure, this get slightly more subtle. If the density function is continuous, we can formally justify this intuition by noticing that $f_\vartheta(x)$ is the limit of the average probability around $x$: $\lim_{\delta \to 0} \frac{1}{\delta} \int_{\left[x - \frac\delta2, x + \frac\delta2\right]} f_\vartheta\ \text d\mu$, which is the fundamental theorem of analysis.
 This result can be generalised using the Lebesgue differentiation theorem ([Wikipedia](https://en.wikipedia.org/wiki/Lebesgue_differentiation_theorem))
 
 ## General definition
@@ -76,10 +77,10 @@ We now suppose that our dataset $D$ contains points $(x^{(i)}, y^{(i)}) \in U \t
 The model is described by a function $f_W: U \to (0, 1)$ that assigns an input to the probability of the associated output being $1$, thus defining a Bernoulli distribution.
 The logarithm of the probability of $k \in \{0, 1\}$ for parameter $W$ given input $x^{(i)}$ is therefore $k \log\left(f_W(x^{(i)})\right) + (1-k)\log\left(1 - f_W(x^{(i)})\right)$.
 The $\log$-likelihood is:
-$$\sum_{i = 1}^N y^{(i)} \log(f_W(x^{(i)})) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
+$$\sum_{i = 1}^N y^{(i)} \log\left(f_W(x^{(i)})\right) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
 
 and the cost function we want to minimise is:
-$$\sum_{i = 1}^N y^{(i)} \log\left(f_W(x^{(i)})\right) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
+$$-\sum_{i = 1}^N y^{(i)} \log\left(f_W(x^{(i)})\right) + (1-y^{(i)})\log\left(1 - f_W(x^{(i)})\right).$$
 
 We can generalise this formula to any classification problem.
 Consider a set of $k$ classes (without loss of generality, we'll assume classes are $\{1, \mathellipsis, k\}$).
@@ -91,4 +92,4 @@ Given an input $x^{(i)}$, the $\log$-likelihood of output $y^{(i)}$ for paramete
 $$\log f_W(x^{(i)})_y^{(i)},$$
 
 and the cost of the dataset is:
-$$-\sum_{i = 1}^N \log f_W(x^{(i)})_y^{(i)}.$$
+$$-\sum_{i = 1}^N \log f_W(x^{(i)})_{y^{(i)}}.$$

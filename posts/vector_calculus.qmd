@@ -1,0 +1,378 @@
+---
+title: "Multivariate calculus for machine learning: from theory to building an automatic differentiation system"
+categories:
+    - Maths
+    - Machine learning
+---
+
+Many modern machine learning models are trained using gradient-based approaches.
+This means that at every iteration of the training process, parameters are adjusted based on the value of the differential of the cost incurred by a set of training examples so as to make the differential closer to zero.
+In order to efficiently keep track of the derivative of the cost with respect to every parameter, machine learning libraries rely on _automatic differentiation_ systems.
+The goal of this article is to lay the theoretical foundations of multivariate differential calculus from the perspective of machine learning and to show how to implement an automatic differentiation system from scratch, in C++.
+
+
+# Tests: setting the goals
+
+Before diving into how automatic differentiation systems work and how to build one, we'll clearly define our objective by defining
+a series of tests our program will have to pass.
+
+I use the library `Catch2` to create unit tests.
+
+```cpp
+TEST_CASE("Derivative of a sum", "[DerivativeSum]") {
+    Expression a(0), b(0), c(-1), d(2), e(1.5), f(-1.5), g({1, 2}), h({0, -1});
+
+    Expression x(a + b);
+    x.differentiate(1);
+    REQUIRE(x.getDerivative() == Scalar{1, 0});
+    REQUIRE(a.getDerivative() == Scalar{1, 0});
+    REQUIRE(b.getDerivative() == Scalar{1, 0});
+    a.resetDerivative();
+    b.resetDerivative();
+
+    Expression y(c + d + e);
+    y.differentiate(1);
+    REQUIRE(y.getDerivative() == Scalar{1, 0});
+    REQUIRE(c.getDerivative() == Scalar{1, 0});
+    REQUIRE(d.getDerivative() == Scalar{1, 0});
+    REQUIRE(e.getDerivative() == Scalar{1, 0});
+    c.resetDerivative();
+    d.resetDerivative();
+    e.resetDerivative();
+
+    Expression z(f + f + g + h - h);
+    z.differentiate(1);
+    REQUIRE(z.getDerivative() == Scalar{1, 0});
+    REQUIRE(f.getDerivative() == Scalar{2, 0});
+    REQUIRE(g.getDerivative() == Scalar{1, 0});
+    REQUIRE(h.getDerivative() == Scalar{0, 0});
+    f.resetDerivative();
+    g.resetDerivative();
+    h.resetDerivative();
+
+    Expression w(h * a + b * g + c * b);
+    w.differentiate(1);
+    REQUIRE(w.getDerivative() == Scalar{1, 0});
+    REQUIRE(h.getDerivative() == a.getValue());
+    REQUIRE(a.getDerivative() == h.getValue());
+    REQUIRE(b.getDerivative() == g.getValue() + c.getValue());
+    REQUIRE(g.getDerivative() == b.getValue());
+    REQUIRE(c.getDerivative() == b.getValue());
+}
+
+TEST_CASE("Derivative of a product", "[DerivativeProduct]") {
+    Expression a(0), b(0), c(-1), d(2), e(1.5), f(-1.5), g({1, 2}), h({0, -1});
+
+    Expression x(a * b);
+    x.differentiate(1);
+    REQUIRE(x.getDerivative() == Scalar{1, 0});
+    REQUIRE(a.getDerivative() == b.getValue());
+    REQUIRE(b.getDerivative() == a.getValue());
+    a.resetDerivative();
+    b.resetDerivative();
+
+    Expression y(c * d * e);
+    y.differentiate(1);
+    REQUIRE(y.getDerivative() == Scalar{1, 0});
+    REQUIRE(c.getDerivative() == d.getValue() * e.getValue());
+    REQUIRE(d.getDerivative() == c.getValue() * e.getValue());
+    REQUIRE(e.getDerivative() == c.getValue() * d.getValue());
+    c.resetDerivative();
+    d.resetDerivative();
+    e.resetDerivative();
+
+    Expression z(f * f * g);
+    z.differentiate(1);
+    REQUIRE(z.getDerivative() == Scalar{1, 0});
+    REQUIRE(f.getDerivative() == Scalar{2, 0} * f.getValue() * g.getValue());
+    REQUIRE(g.getDerivative() == f.getValue() * f.getValue());
+    f.resetDerivative();
+    g.resetDerivative();
+
+    Expression w(g * h * (a + b) * (g + b));
+    w.differentiate(1);
+    REQUIRE(w.getDerivative() == Scalar{1, 0});
+    REQUIRE(h.getDerivative() == (g * (a + b) * (g + b)).getValue());
+    REQUIRE(a.getDerivative() == (g * h * (g + b)).getValue());
+    REQUIRE(b.getDerivative() == (g * h * (a + g) + (2 * b)).getValue());
+    REQUIRE(g.getDerivative() == (h * (a + b) * b * 2 * g).getValue());
+}
+
+TEST_CASE("Derivative of a logarithm", "[DerivativeLog]") {
+    Expression a(2.), b(0.5), c(12.5);
+
+    Expression x(log(a));
+    x.differentiate(1);
+    REQUIRE(a.getValue() == 2.);
+    REQUIRE(x.getValue() == log(a.getValue()));
+    REQUIRE(x.getDerivative() == Scalar{1, 0});
+    REQUIRE(a.getDerivative() == 1. / a.getValue());
+    a.resetDerivative();
+    x.resetDerivative();
+
+    Expression y(log(x));
+    y.differentiate(1);
+    REQUIRE(y.getDerivative() == 1.);
+    REQUIRE(x.getDerivative() == 1.0 / x.getValue());
+    REQUIRE(a.getDerivative() == 1.0 / (a.getValue() * x.getValue()));
+    x.resetDerivative();
+    a.resetDerivative();
+
+    Expression w(log(c));
+    Expression z(log(log(w) * w));
+    z.differentiate(1);
+    REQUIRE(z.getDerivative() == 1.0);
+    REQUIRE(abs(w.getDerivative() - (log(w) + 1.).getValue() / (w * log(w)).getValue()) < 1e-10);
+    REQUIRE(abs(c.getDerivative() - (log(log(c)) + 1.).getValue() / (c * log(c) * log(log(c))).getValue()) < 1e-10);
+}
+```
+
+To understand the tests, here is a brief description of the classes and methods:
+
+- `Scalar` is an alias for the type of complex numbers over doubles.
+- The method `differentiate(1)` of an expression $E$ calculates the derivative of $E$ with respect to each of its sub-expressions.
+For example in the last test (derivative of a logarithm), `z.differentiate(1)` calculates the derivative of `z` with respect to `c`, `w` and `z` itself.
+- The argument `1` passed to differentiate exists for technical reasons that will become clear later.
+- The name of the method `x.getDerivative` might seem misleading as it returns the derivative of a top-level expression with respect to `x`, NOT the derivative of `x`.
+- Since each expression `x` stores the derivative of a top-level expression with respect to `x`, it is important to call `x.resetDerivative` if `x` appears in multiple expressions that we want to differentiate.
+
+# Building the theory
+
+Let $n$, $p$ and $s$ be strictly positive integers.
+
+## Total derivatives
+
+Let $f: \mathbb{C}^n \to \mathbb{C}^p$.
+$f$ is said to be _totally differentiable_, (or _Fréchet-differentiable_, or, for our purposes, simply _differentiable_), at point $\mathbf{a} \in \mathbb{C}^n$ if there exists a linear map $D_{\mathbf{a}}(f) : \mathbb{C}^n \to \mathbb{C}^p$ such that:
+
+\begin{align*}
+\mathbb{C}^n \setminus \{0\} &\to \mathbb{C}^p\\
+\boldsymbol{\delta} &\mapsto \frac{f(\mathbf{a} + \boldsymbol{\delta}) - f(\mathbf{a}) - D_{\mathbf{a}}(f)(\boldsymbol{\delta})}{\|\boldsymbol{\delta}\|}
+\end{align*}
+
+tends to $0$ at $0$.
+
+::: {.callout-note}
+It is actually useful to use complex numbers, even when focusing on applications to machine learning.
+For example, convolutional layers may compute the Fourier transform of a value that depends on parameters, which requires parameters to be applied to complex-valued functions.
+:::
+
+A few comments:
+
+- If $f$ is differentiable at point $\mathbf{a}$ then it can be shown that there exists a unique map $D_{\mathbf{a}}(f)$ that satisfies the above conditions. It is called the _total derivative_, or _(Fréchet-) differential_ of $f$ at point $\mathbf{a}$.
+- The definition assumes the choice of a norm over each of the two spaces. If a vector space over $\mathbb{C}$ is finitely generated then all norms on this space define the same limits of functions, so you may choose whichever norm you fancy the most.
+- This definition generalises the concept of differentiability and derivatives for real-valued functions, in the sense that $f : \mathbb{C} \to \mathbb{R}$ has a derivative $f'(a)$ at point $a$ if and only if it is differentiable at $a$ (as per the above definition, when viewed as a function from $\mathbb{C}^1$ to $\mathbb{C}^1$) with differential $\delta \mapsto f'(a)\delta$.
+
+This definition can be easily generalised to functions that map a subset of any vector space over $\mathbb{R}$ or $\mathbb{C}$ to another vector space over the same field.
+The only non-trivial difference is that we'll then require $D_\mathbf{a}(f)$ to be continuous (this assumption was unnecessary in the previous setting because linear maps defined on a finitely-generated real or complex normed vector space are always continuous).
+
+Here are some examples of differentiable functions.
+
+- Every continuous linear map is differentiable everywhere, and its differential at any point is the linear map itself.
+- If $\phi$ is linear and $f$ is differentiable at $\mathbf{a}$, then $\phi \circ f$ is differentiable at $\mathbf{a}$ and its differential is $\phi \circ D_{\mathbf{a}}f$
+- Let $g: \mathbb{C}^p \to \mathbb{C}^s$. We assume $f$ is differentiable at point $\mathbf{a}$ and $g$ is differentiable at $f(\mathbf{a})$.
+Then $g \circ f$ is differentiable at $\mathbf{a}$ and $D_\mathbf{a}(g \circ f) = D_{f(\mathbf{a})}(g) \circ D_\mathbf{a}(f)$.
+
+## Partial derivatives
+
+Another approach to differentiation of multivariate functions involves applying the one-dimensional definition of differentiability and derivatives to partial functions $x_i \mapsto f(x_1, \mathellipsis, x_i, \mathellipsis, x_n)$.
+This motivates the definition of partial derivatives.
+Given $f: \mathbb{C}^n \to \mathbb{C}^p$ and $i \in \{1, \mathellipsis, n\}$, the _$i$-th partial derivative of $f$ at point $\mathbf{a}$_ is the function that maps $\lambda \in \mathbb{C}$ to the limit of
+$$\frac{f(\mathbf{a} + \lambda \mathbf{e_i}) - f(\mathbf{a})}{\lambda}$$
+as $\lambda \to 0$, if there is one.
+Here $\mathbf{e_i}$ denotes the $i$-th vector of the canonical basis of $\mathbb{C}^n$, i.e. the vector whose components are all $0$ except for the $i$-th one, which is $1$.
+
+The $i$-th partial derivative of $f$ is denoted $\partial_if$.
+It is sometimes convenient to work with formal expressions rather than functions, in which case we write $\frac{\partial f(x, y)}{\partial x}$.
+
+It can be shown that if a function is differentiable at point $a$ then it admits an $i$-th partial derivative at $a$, for every $i$.
+The converse is not true, however it is sufficient to admit _continuous_ partial derivatives along every component at some point $a$ to be differentiable at $a$.
+Moreover, the $i$-th partial derivative of $f$ at $a$ is given by $D_{a}(f)(e_i)$.
+This means that the matrix of $D_{a}(f)$ is $(\partial_j f_i(a))_{1 \le i \le p, 1 \le j \le n}$.
+This matrix is known as the _Jacobian matrix_ (of $f$, at point $a$).
+
+It follows from the formula for the total derivative of the composition of two functions that the Jacobian matrix of $g \circ f$ is $J_g J_f$, where $J_g$ (respectively $J_f$) is the Jacobian matrix of $g$ (respectively $f$).
+Expanding this formula gives:
+
+$$\partial_j(g_i \circ f)(a) = \sum_{k = 1}^p \partial_k g_i(f(a)) \partial_j f_k(a),$$
+where $g: \mathbb C^n \to \mathbb C^p$ and $f: \mathbb C^p \to \mathbb C^s$.
+
+# The automatic differentiation framework
+
+## Laying the bricks
+
+We consider a set of functions whose partial derivatives are all known.
+These functions are the building blocks of every expression we want to differentiate.
+For example, they may include sum, product, negation, reciprocal and exponentiation, as well as exponentiation, logarithm and absolute value.
+
+These functions are assumed to be differentiable at any point at which they're not undefined.
+For example, we would either not allow absolute value to be applied to $0$ at all or arbitrarily extend its derivative by choosing among $-1$ and $1$.
+
+We can express the cost of a model as follows:
+$$c = f(u(x)),$$
+where $f$ is a scalar-valued function whose derivative is known, $u = (u_1, \mathellipsis, u_p)$ and $x = (x_1, \mathellipsis, x_n)$.
+Our goal is to calculate the partial derivative of $c$ with respect to $x_j$ (for every $j \in \{1, \mathellipsis, n\}$).
+
+For every variable $y$, we let $d(y)$ denote $\frac{\partial c}{\partial y}$.
+
+It follows from the formula we saw at the end of the previous section that for $j \in \{1, \mathellipsis, n\}$:
+$$d(x_j) = \sum_{k = 1}^p d(u_k) \frac{\partial u_k(x)}{\partial x_j}.$$
+For every $j \in \{1, \mathellipsis, p\}$, $(d(u_k))$ is known and we then have to apply the same reasoning to the expression $u_k(x)$ (which has to be of the form $g(v(x))$, for some $g$ whose derivative is known).
+
+
+## Implementation outline
+
+We'll define a class that represents variables and expressions of the form $f(E)$, where $f$ is a function whose derivative is known and $E$ is an expression or a variable.
+Each instance of the class will have three fields:
+
+- `type` (e.g. `Variable`, `Sum`, `Product`, `NaturalLog`…):
+- `value` (a complex number);
+- `derivative`, a pointer to its derivative.
+
+Non-atomic expressions (i.e. expressions that are not variables) also contain references to their sub-expressions (for example, expressions of type `NaturalLog` have one sub-expression and expressions of type `Sum` have two).
+They might as well contain scalar parameters.
+For example, we can have a type `AffineCombination` that describes expressions of the form $aE + b$ where $a$ and $b$ are scalars and $E$ is an expression. We won't implement this feature in this article.
+
+At the end of the differentiation procedure, the value `derivative` points to is the value of the derivative of the top-level expression (i.e. the cost) with respect to the current instance.
+In other words, it is the sum over all its super-expressions $f(E)$ of the derivative of the cost with respect to $f(E)$ times the derivative of $f(E)$ with respect to $E$.
+
+To obtain the final value of `derivative`, we'll use the method `exp.differentiate(h)`.
+It is called by every super-expression `u(exp)` of `exp`.
+The parameter $h$ `u(exp)` passes to `exp.differentiate` is the value of the corresponding term in the expression of $d($`exp`$)$, i.e. $d(u) \frac{\partial u(\text{exp})}{\partial \text{exp}}$.
+`differentiate` will then add `h` to the `derivative` of the current class and call `sub.differentiate` on each of its sub-expressions.
+(Don't worry if this sounds confusing, it'll be easier to understand in the implementation section.)
+
+The derivative of each expression involved in the computation of the cost will then be calculated from the top-level expression (whose `differentiate` method takes parameter $1$) down to each variables.
+
+# Implementation details
+
+## The `Expression` class
+
+This subsection decribes the general implementation of the `Expression` class.
+In many aspects, implementation details shown here are a matter of personal style.
+Feel free to skip to the next section, where we'll discuss the implementation of `differentiate`.
+
+Here is the content of our header file.
+
+```C++
+enum Type {
+    Sum,
+    Product,
+    NaturalLog,
+    Variable,
+};
+
+typedef std::complex<double> Scalar;
+
+class Expression {
+private:
+    Type type;
+    Scalar value;
+    std::shared_ptr<Scalar> derivative;
+    std::shared_ptr<Expression> lhs, rhs;
+
+public:
+    Expression(Scalar value);
+
+    Expression(double value);
+
+    Expression();
+
+    Expression(const Expression& lhs, const Expression& rhs, Type type);
+
+    Expression operator+(const Expression& other) const;
+
+    Expression operator*(const Expression& other) const;
+
+    Expression operator*(Scalar scalar) const;
+
+    Expression operator-() const;
+
+    Expression operator-(const Expression& other) const;
+
+    bool operator<(const Expression& other) const;
+
+    bool operator<(double x) const;
+
+    bool operator>(const Expression& other) const;
+
+    bool operator>(double x) const;
+
+    bool operator==(const Expression& other) const;
+
+    bool operator!=(const Expression& other) const;
+
+    [[nodiscard]] Scalar getValue() const;
+
+    [[nodiscard]] Scalar getDerivative() const;
+
+    void differentiate(Scalar h) const;
+};
+```
+
+Here is a brief overview of what we did:
+
+- We defined two implicit constructors that allow automatic conversions of complex and floating-point numbers into an instance of `Expression`.
+- We defined a constructor that takes no parameters in order to satisfy the requirements of the Eigen library to create matrices whose coefficients are instances of `Expression`.
+- We overloaded basic operators to perform most operations required to implement simple machine learning models.
+
+## The `differentiate` method
+
+Here is the general structure of the `differentiate` method:
+
+```C++
+void Expression::differentiate(Scalar h) const {
+    *(this->derivative) += h;
+    switch (type) {
+        case Sum:
+            this->lhs->differentiate(...);
+            this->rhs->differentiate(...);
+            break;
+        case Product:
+            this->lhs->differentiate(...);
+            this->rhs->differentiate(...);
+            break;
+        case NaturalLog:
+            this->lhs->differentiate(...);
+        case Variable:
+            break;
+    }
+}
+```
+
+This section derives expressions for the parameter of recursive calls of `Sum`, `Product` and `NaturalLog`.
+
+### Sum
+
+Consider the expression `z = x + y` and let `h` denote the derivative of the cost with respect to `z` (i.e. $d($`z`$)$), which is known (as it was passed to the `differentiate` method of `z`).
+We said in the implementation outline that we need to call `x.differentiate(h2)`, where `h2` is given by:
+$$h \times \frac{\partial z}{\partial x},$$
+and similarly with $y$.
+
+We calculate $\frac{\partial z}{\partial x_1} = \frac{\partial z}{\partial x_2} = 1$. Therefore, the `Sum` case should be:
+```C++
+case Sum:
+    this->lhs->differentiate(h);
+    this->rhs->differentiate(h);
+```
+
+### Product
+
+Similarly, consider the expression `z = x * y`.
+The derivative of $z$ with respect to $x$ is $y$ and the derivative of $z$ with respect to $y$ is $x$.
+Therefore, the `Product` case should be:
+
+```C++
+case Product:
+    this->lhs->differentiate(h * rhs->value());
+    this->rhs->differentiate(h * lhs->value());
+```
+
+### Natural logarithm
+
+Finally, let's consider the expression `z = ln(x)`. The derivative of $z$ with respect to $x$ is $1/x$, which means that the value we pass to the `differentiate` method of `x` is $h / x$:
+
+```C++
+case NaturalLog:
+    this->lhs->differentiate(h / lhs->value);
+```
